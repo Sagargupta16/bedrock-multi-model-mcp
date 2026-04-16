@@ -24,14 +24,43 @@ export interface ConverseResult {
   latencyMs: number;
 }
 
-let client: BedrockRuntimeClient | undefined;
+interface ConverseResponse {
+  output?: { message?: { role?: string; content?: Array<{ text?: string }> } };
+  stopReason?: string;
+  usage?: { inputTokens?: number; outputTokens?: number };
+  metrics?: { latencyMs?: number };
+}
 
-function getClient(): BedrockRuntimeClient {
-  if (!client) {
-    const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
-    client = new BedrockRuntimeClient({ region });
+let sdkClient: BedrockRuntimeClient | undefined;
+
+const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
+const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK;
+
+function getSdkClient(): BedrockRuntimeClient {
+  sdkClient ??= new BedrockRuntimeClient({ region });
+  return sdkClient;
+}
+
+// Raw HTTP fallback for bearer token auth if the SDK doesn't pick it up.
+async function converseViaHttp(
+  modelId: string,
+  body: Record<string, unknown>,
+): Promise<ConverseResponse> {
+  const url = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/converse`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${bearerToken}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Bedrock API error (${response.status}): ${text}`);
   }
-  return client;
+  return (await response.json()) as ConverseResponse;
 }
 
 export async function converse(options: ConverseOptions): Promise<ConverseResult> {
@@ -53,29 +82,55 @@ export async function converse(options: ConverseOptions): Promise<ConverseResult
   };
 
   const start = Date.now();
+  let text: string;
+  let inputTokens: number;
+  let outputTokens: number;
+  let stopReason: string;
 
-  const command = new ConverseCommand({
-    modelId: resolvedId,
-    messages,
-    system,
-    inferenceConfig,
-  });
+  try {
+    // Try AWS SDK first (handles both IAM and bearer token via env var)
+    const command = new ConverseCommand({
+      modelId: resolvedId,
+      messages,
+      system,
+      inferenceConfig,
+    });
+    const response = await getSdkClient().send(command);
 
-  const response = await getClient().send(command);
-  const latencyMs = Date.now() - start;
+    const outputContent = response.output?.message?.content;
+    text = outputContent?.map((b) => ("text" in b ? b.text : "")).join("") ?? "";
+    inputTokens = response.usage?.inputTokens ?? 0;
+    outputTokens = response.usage?.outputTokens ?? 0;
+    stopReason = response.stopReason ?? "unknown";
+  } catch (sdkErr) {
+    // If SDK fails and we have a bearer token, fall back to raw HTTP
+    if (!bearerToken) throw sdkErr;
 
-  const outputContent = response.output?.message?.content;
-  const text = outputContent
-    ?.map((block) => ("text" in block ? block.text : ""))
-    .join("")
-    ?? "";
+    const body: Record<string, unknown> = {
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content?.map((c) => ("text" in c ? { text: c.text } : c)),
+      })),
+      inferenceConfig,
+    };
+    if (system) {
+      body.system = system.map((s) => ("text" in s ? { text: s.text } : s));
+    }
+
+    const response = await converseViaHttp(resolvedId, body);
+    const outputContent = response.output?.message?.content;
+    text = outputContent?.map((b) => b.text ?? "").join("") ?? "";
+    inputTokens = response.usage?.inputTokens ?? 0;
+    outputTokens = response.usage?.outputTokens ?? 0;
+    stopReason = response.stopReason ?? "unknown";
+  }
 
   return {
     modelId: resolvedId,
     text,
-    inputTokens: response.usage?.inputTokens ?? 0,
-    outputTokens: response.usage?.outputTokens ?? 0,
-    stopReason: response.stopReason ?? "unknown",
-    latencyMs,
+    inputTokens,
+    outputTokens,
+    stopReason,
+    latencyMs: Date.now() - start,
   };
 }
