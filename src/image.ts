@@ -2,9 +2,8 @@ import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime";
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { homedir } from "node:os";
 
 const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
 const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK;
@@ -170,10 +169,9 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
   const latencyMs = Date.now() - start;
   const base64 = extractBase64(modelId, responseBody);
 
-  // Save to ~/bedrock-images/
-  const outputDir = join(homedir(), "bedrock-images");
-  await mkdir(outputDir, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  // Save to current working directory
+  const outputDir = process.cwd();
+  const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
   const filename = `${timestamp}.png`;
   const filePath = join(outputDir, filename);
   await writeFile(filePath, Buffer.from(base64, "base64"));
