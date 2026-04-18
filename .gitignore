@@ -22,3 +22,6 @@ coverage/
 
 yarn.lock
 pnpm-lock.yaml
+
+# Added for consistency
+.next/
