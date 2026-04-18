@@ -4,6 +4,7 @@ export interface ModelInfo {
   provider: string;
   capabilities: string[];
   maxTokens: number;
+  noTemperature?: boolean;
 }
 
 // Curated registry of popular Bedrock models with their capabilities.
@@ -30,6 +31,14 @@ export const MODEL_REGISTRY: Record<string, ModelInfo> = {
     provider: "Anthropic",
     capabilities: ["text", "vision", "tool_use", "streaming"],
     maxTokens: 32768,
+  },
+  "us.anthropic.claude-opus-4-7": {
+    id: "us.anthropic.claude-opus-4-7",
+    name: "Claude Opus 4.7",
+    provider: "Anthropic",
+    capabilities: ["text", "vision", "tool_use", "streaming"],
+    maxTokens: 32768,
+    noTemperature: true,
   },
   "us.anthropic.claude-sonnet-4-6-v1": {
     id: "us.anthropic.claude-sonnet-4-6-v1",
@@ -162,6 +171,7 @@ export const MODEL_ALIASES: Record<string, string> = {
   "claude-opus": "anthropic.claude-opus-4-0-20250514-v1:0",
   "claude-sonnet": "anthropic.claude-sonnet-4-20250514-v1:0",
   "claude-opus-4.6": "us.anthropic.claude-opus-4-6-v1",
+  "claude-opus-4.7": "us.anthropic.claude-opus-4-7",
   "claude-sonnet-4.6": "us.anthropic.claude-sonnet-4-6-v1",
   "claude-haiku": "anthropic.claude-3-5-haiku-20241022-v1:0",
   "llama4-maverick": "meta.llama4-maverick-17b-instruct-v1:0",

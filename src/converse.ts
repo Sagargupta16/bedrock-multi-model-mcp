@@ -78,8 +78,15 @@ export async function converse(options: ConverseOptions): Promise<ConverseResult
 
   const inferenceConfig: InferenceConfiguration = {
     maxTokens: options.maxTokens ?? defaultMax,
-    temperature: options.temperature ?? 0.7,
   };
+
+  // Some models (e.g. Opus 4.7) reject the temperature parameter
+  if (!info?.noTemperature) {
+    inferenceConfig.temperature = options.temperature ?? 0.7;
+  } else if (options.temperature !== undefined) {
+    // User explicitly set temperature — warn but still omit
+    // (model will reject it regardless)
+  }
 
   const start = Date.now();
   let text: string;
