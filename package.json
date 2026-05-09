@@ -1,6 +1,6 @@
 {
   "name": "bedrock-multi-model-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server for invoking any AWS Bedrock model via the unified Converse API",
   "type": "module",
   "main": "dist/index.js",
@@ -41,7 +41,6 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock": "^3.1030.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1030.0",
     "@modelcontextprotocol/sdk": "^1.29.0"
   },
