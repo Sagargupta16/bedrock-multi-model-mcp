@@ -10,7 +10,7 @@ import { startVideoGeneration, getVideoStatus } from "./video.js";
 
 const server = new McpServer({
   name: "bedrock-multi-model",
-  version: "0.2.0",
+  version: "0.2.1",
 });
 
 // --- Tool: bedrock_ask ---
@@ -151,7 +151,8 @@ server.tool(
   "bedrock_generate_image",
   "Generate an image from a text prompt using AWS Bedrock image models. " +
     "Supports Nova Canvas, Titan Image, Stable Diffusion 3.5, and SDXL. " +
-    "Saves the image to ~/bedrock-images/ and returns the file path.",
+    "Saves the image to the current working directory by default (or output_dir if passed, " +
+    "or BEDROCK_MCP_OUTPUT_DIR env var, falling back to ~/bedrock-images/ if cwd is not writable).",
   {
     model: z.string().optional().describe(
       "Image model alias: 'nova-canvas' (default), 'titan-image', 'sd3.5-large', 'sdxl', or a full model ID"
@@ -165,8 +166,12 @@ server.tool(
       "SDXL: photographic, digital_art, cinematic, comic_book, fantasy_art, line_art, etc."
     ),
     seed: z.number().optional().describe("Random seed for reproducible results"),
+    output_dir: z.string().optional().describe(
+      "Directory to save the image. Absolute or relative to cwd. " +
+      "Auto-created if missing. Overrides BEDROCK_MCP_OUTPUT_DIR and default resolution."
+    ),
   },
-  async ({ model, prompt, negative_prompt, width, height, style, seed }) => {
+  async ({ model, prompt, negative_prompt, width, height, style, seed, output_dir }) => {
     try {
       const result = await generateImage({
         model: model ?? "nova-canvas",
@@ -176,6 +181,7 @@ server.tool(
         height,
         style,
         seed,
+        outputDir: output_dir,
       });
 
       const entry = IMAGE_MODELS[model?.toLowerCase() ?? "nova-canvas"];

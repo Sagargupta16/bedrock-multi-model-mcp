@@ -89,6 +89,7 @@ Add to your Claude Code MCP settings (`~/.claude.json`):
 | `AWS_ACCESS_KEY_ID` | - | AWS access key (if not using bearer token/SSO) |
 | `AWS_SECRET_ACCESS_KEY` | - | AWS secret key (if not using bearer token/SSO) |
 | `AWS_PROFILE` | - | Named AWS profile from `~/.aws/credentials` |
+| `BEDROCK_MCP_OUTPUT_DIR` | cwd (or `~/bedrock-images` if cwd is not writable) | Default output directory for generated images. Overridden by the `output_dir` tool arg. Directory is auto-created. |
 
 ### Authentication
 

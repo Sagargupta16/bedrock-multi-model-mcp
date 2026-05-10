@@ -2,8 +2,9 @@ import {
   BedrockRuntimeClient,
   InvokeModelCommand,
 } from "@aws-sdk/client-bedrock-runtime";
-import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { access, constants, mkdir, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
+import { isAbsolute, join, resolve } from "node:path";
 
 const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
 const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK;
@@ -24,6 +25,36 @@ export const IMAGE_MODELS: Record<string, { id: string; name: string; provider: 
 
 export type ImageModelAlias = keyof typeof IMAGE_MODELS;
 
+async function isWritable(dir: string): Promise<boolean> {
+  try {
+    await access(dir, constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveOutputDir(explicit?: string): Promise<string> {
+  if (explicit) {
+    return isAbsolute(explicit) ? explicit : resolve(process.cwd(), explicit);
+  }
+  const fromEnv = process.env.BEDROCK_MCP_OUTPUT_DIR;
+  if (fromEnv) return fromEnv;
+
+  const cwd = process.cwd();
+  const lower = cwd.toLowerCase();
+  const isSystemDir =
+    lower.includes(String.raw`\windows\system32`) ||
+    lower.includes(String.raw`\windows\syswow64`) ||
+    lower === String.raw`c:\windows` ||
+    lower === "/";
+
+  if (!isSystemDir && (await isWritable(cwd))) {
+    return cwd;
+  }
+  return join(homedir(), "bedrock-images");
+}
+
 const NOVA_STYLES = [
   "PHOTOREALISM", "3D_ANIMATED_FAMILY_FILM", "DESIGN_SKETCH",
   "FLAT_VECTOR_ILLUSTRATION", "GRAPHIC_NOVEL_ILLUSTRATION",
@@ -40,6 +71,7 @@ export interface ImageOptions {
   height?: number;
   style?: string;
   seed?: number;
+  outputDir?: string;
 }
 
 export interface ImageResult {
@@ -169,8 +201,8 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
   const latencyMs = Date.now() - start;
   const base64 = extractBase64(modelId, responseBody);
 
-  // Save to current working directory
-  const outputDir = process.cwd();
+  const outputDir = await resolveOutputDir(options.outputDir);
+  await mkdir(outputDir, { recursive: true });
   const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
   const filename = `${timestamp}.png`;
   const filePath = join(outputDir, filename);

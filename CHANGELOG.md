@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-05-06
+
+### Fixed
+
+- Image save path used `process.cwd()` unconditionally, which fails when Claude Desktop spawns the MCP from `C:\Windows\System32` (write-protected).
+
+### Changed
+
+- `bedrock_generate_image` now accepts an `output_dir` tool parameter so callers can choose where images land (absolute or relative to cwd).
+- Fallback resolution order: `output_dir` arg -> `BEDROCK_MCP_OUTPUT_DIR` env -> `cwd` when writable and not a system directory -> `~/bedrock-images/`. Output directory is auto-created.
+
 ## [0.2.0] - 2026-04-16
 
 ### Added
