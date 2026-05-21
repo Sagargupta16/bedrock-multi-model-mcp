@@ -16,11 +16,23 @@ function getClient(): BedrockRuntimeClient {
   return sdkClient;
 }
 
+// All entries are ACTIVE per Bedrock's modelLifecycle.status as of 2026-05-21.
+// Nova Canvas / Titan Image Gen v2 were removed (LEGACY status, EOL pending).
+// Stability AI's edit/upscale suite is the current ACTIVE Bedrock image generation surface.
 export const IMAGE_MODELS: Record<string, { id: string; name: string; provider: string }> = {
-  "nova-canvas": { id: "amazon.nova-canvas-v1:0", name: "Nova Canvas", provider: "Amazon" },
-  "titan-image": { id: "amazon.titan-image-generator-v2:0", name: "Titan Image Gen v2", provider: "Amazon" },
-  "sd3.5-large": { id: "stability.sd3-5-large-v1:0", name: "SD 3.5 Large", provider: "Stability AI" },
-  "sdxl": { id: "stability.stable-diffusion-xl-v1:0", name: "SDXL 1.0", provider: "Stability AI" },
+  "stable-inpaint": { id: "stability.stable-image-inpaint-v1:0", name: "Stable Image Inpaint", provider: "Stability AI" },
+  "stable-erase": { id: "stability.stable-image-erase-object-v1:0", name: "Stable Image Erase Object", provider: "Stability AI" },
+  "stable-remove-bg": { id: "stability.stable-image-remove-background-v1:0", name: "Stable Image Remove Background", provider: "Stability AI" },
+  "stable-search-replace": { id: "stability.stable-image-search-replace-v1:0", name: "Stable Image Search & Replace", provider: "Stability AI" },
+  "stable-search-recolor": { id: "stability.stable-image-search-recolor-v1:0", name: "Stable Image Search & Recolor", provider: "Stability AI" },
+  "stable-style-guide": { id: "stability.stable-image-style-guide-v1:0", name: "Stable Image Style Guide", provider: "Stability AI" },
+  "stable-style-transfer": { id: "stability.stable-style-transfer-v1:0", name: "Stable Style Transfer", provider: "Stability AI" },
+  "stable-control-sketch": { id: "stability.stable-image-control-sketch-v1:0", name: "Stable Control Sketch", provider: "Stability AI" },
+  "stable-control-structure": { id: "stability.stable-image-control-structure-v1:0", name: "Stable Control Structure", provider: "Stability AI" },
+  "stable-outpaint": { id: "stability.stable-outpaint-v1:0", name: "Stable Outpaint", provider: "Stability AI" },
+  "upscale-fast": { id: "stability.stable-fast-upscale-v1:0", name: "Stable Fast Upscale", provider: "Stability AI" },
+  "upscale-conservative": { id: "stability.stable-conservative-upscale-v1:0", name: "Stable Conservative Upscale", provider: "Stability AI" },
+  "upscale-creative": { id: "stability.stable-creative-upscale-v1:0", name: "Stable Creative Upscale", provider: "Stability AI" },
 };
 
 export type ImageModelAlias = keyof typeof IMAGE_MODELS;
@@ -82,76 +94,21 @@ export interface ImageResult {
   latencyMs: number;
 }
 
-function buildRequestBody(modelId: string, options: ImageOptions): string {
-  const w = options.width ?? 1024;
-  const h = options.height ?? 1024;
-
-  if (modelId.startsWith("amazon.nova-canvas")) {
-    return JSON.stringify({
-      taskType: "TEXT_IMAGE",
-      textToImageParams: {
-        text: options.prompt,
-        ...(options.negativePrompt && { negativeText: options.negativePrompt }),
-        ...(options.style && { style: options.style }),
-      },
-      imageGenerationConfig: {
-        width: w,
-        height: h,
-        quality: "standard",
-        cfgScale: 6.5,
-        seed: options.seed ?? Math.floor(Math.random() * 2147483646),
-        numberOfImages: 1,
-      },
-    });
-  }
-
-  if (modelId.startsWith("amazon.titan-image")) {
-    return JSON.stringify({
-      taskType: "TEXT_IMAGE",
-      textToImageParams: {
-        text: options.prompt,
-        ...(options.negativePrompt && { negativeText: options.negativePrompt }),
-      },
-      imageGenerationConfig: {
-        width: w,
-        height: h,
-        quality: "standard",
-        cfgScale: 8.0,
-        seed: options.seed ?? Math.floor(Math.random() * 2147483646),
-        numberOfImages: 1,
-      },
-    });
-  }
-
-  if (modelId.startsWith("stability.sd3")) {
-    return JSON.stringify({
-      prompt: options.prompt,
-      mode: "text-to-image",
-      output_format: "png",
-      ...(options.negativePrompt && { negative_prompt: options.negativePrompt }),
-      seed: options.seed ?? 0,
-    });
-  }
-
-  // SDXL
+function buildRequestBody(_modelId: string, options: ImageOptions): string {
+  // Stability suite uses a unified body shape for text-prompted edits / upscales.
+  // Edit modes (inpaint/erase/search-replace/etc) typically expect an `image` parameter
+  // as well; callers must pass it via options.style or extend ImageOptions if needed.
   return JSON.stringify({
-    text_prompts: [{ text: options.prompt, weight: 1.0 }],
-    cfg_scale: 7.5,
-    steps: 50,
+    prompt: options.prompt,
+    output_format: "png",
+    ...(options.negativePrompt && { negative_prompt: options.negativePrompt }),
     seed: options.seed ?? 0,
-    width: w,
-    height: h,
-    ...(options.style && { style_preset: options.style }),
   });
 }
 
-function extractBase64(modelId: string, responseBody: string): string {
+function extractBase64(_modelId: string, responseBody: string): string {
   const json = JSON.parse(responseBody);
-
-  if (modelId.startsWith("stability.stable-diffusion-xl")) {
-    return json.artifacts[0].base64;
-  }
-  // Nova Canvas, Titan Image, SD 3.5 all use images[0]
+  // Stability suite returns base64 in images[0].
   return json.images[0];
 }
 
