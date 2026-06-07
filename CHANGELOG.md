@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-06-07
+
+### Fixed
+
+- `claude-sonnet` alias pointed at `us.anthropic.claude-sonnet-4-6-v1`, which does not exist (Bedrock returns "invalid model identifier"). Corrected to `us.anthropic.claude-sonnet-4-6`.
+- Text model IDs that require a cross-region inference profile now use the working `us.` prefix (Claude, Llama, Pixtral, DeepSeek R1) instead of bare IDs that fail on-demand invocation.
+- `bedrock_generate_image` silently ignored `width`/`height` and reported a fabricated output size. Dimensions are now sent to the model and honored.
+- Image tool listed Stability edit/upscale models that require an input image no tool parameter supplied, and a default `nova-canvas` that resolved to a removed entry. Image generation was effectively broken; restored with working Amazon models.
+
+### Added
+
+- `bedrock_embed_similarity` tool - embeds 2-50 texts (Amazon Titan, Cohere) and returns a cosine-similarity matrix. Embedding registry in `src/data/embedding-models.json`.
+- Claude Opus 4.8, Nova Premier, Nova 2 Lite, GPT-OSS 120B/20B to the text registry (all verified invokable).
+- `useCase` field per model, surfaced as a column in `bedrock_list_models`.
+- `src/models.test.ts` - asserts every alias resolves to a registry model (guards the drift that caused the broken sonnet alias).
+
+### Changed
+
+- Model data extracted from `.ts` logic into `src/data/text-models.json` and `src/data/image-models.json`, validated by Zod schemas at load time. Editable without recompiling.
+- Restructured: API wrappers moved to `src/bedrock/` with a shared `client.ts`; `src/types.ts` holds data schemas.
+- Migrated tool registration from the deprecated `server.tool()` to `server.registerTool()` with read-only/open-world annotations.
+- Image generation restored to Amazon Nova Canvas + Titan Image Generator v2 (both verified generating real PNGs with honored dimensions). Removed the inaccessible Stability edit/upscale entries.
+- `zod` is now an explicit dependency (was relied on transitively via the MCP SDK).
+
 ## [0.2.1] - 2026-05-06
 
 ### Fixed
