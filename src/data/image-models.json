@@ -1,0 +1,16 @@
+[
+  {
+    "id": "amazon.nova-canvas-v1:0",
+    "name": "Nova Canvas",
+    "provider": "Amazon",
+    "aliases": ["nova-canvas"],
+    "maxResolution": "2048x2048"
+  },
+  {
+    "id": "amazon.titan-image-generator-v2:0",
+    "name": "Titan Image Generator v2",
+    "provider": "Amazon",
+    "aliases": ["titan-image"],
+    "maxResolution": "1408x1408"
+  }
+]

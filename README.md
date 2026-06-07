@@ -1,6 +1,6 @@
 # bedrock-multi-model-mcp
 
-MCP server for AWS Bedrock - text, image, and video generation from any model. Use Llama, Mistral, Nova, Cohere, DeepSeek, Stable Diffusion, and Claude from Claude Code (or any MCP client).
+MCP server for AWS Bedrock - text, image, and video generation from any model. Use Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS, and more from Claude Code (or any MCP client).
 
 ## Tools
 
@@ -8,24 +8,28 @@ MCP server for AWS Bedrock - text, image, and video generation from any model. U
 |------|-------------|
 | `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. |
 | `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. |
-| `bedrock_list_models` | List available text models with aliases and capabilities. |
-| `bedrock_generate_image` | Generate images from text (Nova Canvas, Titan Image, SD 3.5, SDXL). Saves PNG locally. |
+| `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
+| `bedrock_generate_image` | Generate images from text (Nova Canvas, Titan Image v2). Saves PNG locally. |
 | `bedrock_generate_video` | Start async video generation (Nova Reel). Output to S3. |
 | `bedrock_video_status` | Check video generation job progress. |
+| `bedrock_embed_similarity` | Embed 2+ texts (Titan, Cohere) and return a cosine-similarity matrix. |
 
 ## Supported Models
+
+Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.json`) - edit those files to add or remove models without touching code.
 
 ### Text (Converse API)
 
 | Provider | Models | Aliases |
 |----------|--------|---------|
-| Meta | Llama 4 Maverick, Llama 4 Scout, Llama 3.3 70B, Llama 3.1 405B | `llama4`, `llama4-scout`, `llama3.3`, `llama3.1-405b` |
-| Mistral | Mistral Large 2, Mistral Small, Pixtral Large | `mistral-large`, `mistral-small`, `pixtral` |
-| Amazon | Nova Pro, Nova Lite, Nova Micro | `nova-pro`, `nova-lite`, `nova-micro` |
-| Cohere | Command R+, Command R | `command-r-plus`, `command-r` |
+| Anthropic | Claude Opus 4.8 / 4.7 / 4.6, Sonnet 4.6, Haiku 4.5 | `claude-opus`, `claude-sonnet`, `claude-haiku` |
+| Meta | Llama 4 Maverick, Llama 4 Scout, Llama 3.3 70B | `llama4`, `llama4-scout`, `llama3.3` |
+| Mistral | Mistral Large 3, Devstral 2, Mistral Small, Pixtral Large | `mistral-large`, `devstral`, `mistral-small`, `pixtral` |
+| Amazon | Nova Premier, Nova Pro, Nova 2 Lite, Nova Lite, Nova Micro | `nova-premier`, `nova-pro`, `nova2-lite`, `nova-lite`, `nova-micro` |
+| Qwen | Qwen3 Coder Next, Qwen3 VL 235B | `qwen-coder`, `qwen-vl` |
+| DeepSeek | DeepSeek V3.2, DeepSeek R1 | `deepseek`, `deepseek-r1` |
 | AI21 | Jamba 1.5 Large | `jamba` |
-| DeepSeek | DeepSeek R1 | `deepseek`, `deepseek-r1` |
-| Anthropic | Claude Opus 4, Sonnet 4, Haiku 3.5 | `claude-opus`, `claude-sonnet`, `claude-haiku` |
+| OpenAI | GPT-OSS 120B, GPT-OSS 20B | `gpt-oss`, `gpt-oss-20b` |
 
 ### Image (InvokeModel API)
 
@@ -33,8 +37,6 @@ MCP server for AWS Bedrock - text, image, and video generation from any model. U
 |-------|-------|----------------|
 | Amazon Nova Canvas | `nova-canvas` | 2048x2048 |
 | Amazon Titan Image Gen v2 | `titan-image` | 1408x1408 |
-| Stability SD 3.5 Large | `sd3.5-large` | aspect ratio based |
-| Stability SDXL 1.0 | `sdxl` | 1024x1024 |
 
 ### Video (Async API)
 
@@ -42,7 +44,19 @@ MCP server for AWS Bedrock - text, image, and video generation from any model. U
 |-------|----------|------------|
 | Amazon Nova Reel | 6s (single shot), 12-120s (multi-shot) | 1280x720 @ 24fps |
 
-You can also pass any valid Bedrock model ID directly.
+### Embeddings (InvokeModel API)
+
+| Model | Alias | Dimensions |
+|-------|-------|------------|
+| Amazon Titan Text Embeddings V2 | `titan-v2` | 1024 |
+| Amazon Titan Text Embeddings V1 | `titan-v1` | 1536 |
+| Amazon Titan Multimodal Embeddings | `titan-multimodal` | 1024 |
+| Cohere Embed English v3 | `cohere-en` | 1024 |
+| Cohere Embed Multilingual v3 | `cohere-multi` | 1024 |
+
+You can also pass any valid Bedrock model ID directly. Note: many foundation models require a cross-region inference profile (`us.` prefix) for on-demand invocation - the registry uses the working form for each model.
+
+> **Model availability varies by region and account.** The registry IDs are verified working in `us-east-1`, but individual models may not be enabled in your region or granted to your account. Models you can't access return a clear error (per-model in `bedrock_compare`); the rest still work. Enable models in the AWS Console under Bedrock > Model access.
 
 ## Setup
 
@@ -124,16 +138,32 @@ The server supports two auth methods:
 "Use bedrock_generate_video: Closeup of ocean waves crashing on rocks at sunset, s3_uri: s3://my-bucket/videos/"
 ```
 
+### Compare text similarity
+
+```
+"Use bedrock_embed_similarity to compare: 'a cat', 'a kitten', 'a car'"
+```
+
 ## Architecture
 
 ```
 src/
-  index.ts       # MCP server - tool registration, stdio transport
-  converse.ts    # Bedrock Converse API wrapper (text models)
-  image.ts       # Bedrock InvokeModel wrapper (image models)
-  video.ts       # Bedrock async invoke wrapper (video models)
-  models.ts      # Model registry with IDs, aliases, and capabilities
+  index.ts          # MCP server - tool registration, stdio transport
+  models.ts         # Loads + validates text-model data, resolves aliases
+  types.ts          # Zod schemas for model data validation
+  bedrock/
+    client.ts       # Shared region/auth config + raw HTTP fallback
+    converse.ts     # Converse API wrapper (text models)
+    image.ts        # InvokeModel wrapper (image models)
+    video.ts        # Async invoke wrapper (video models)
+    embed.ts        # InvokeModel wrapper (embeddings) + cosine similarity
+  data/
+    text-models.json       # Text model registry (data, not code)
+    image-models.json      # Image model registry
+    embedding-models.json  # Embedding model registry
 ```
+
+Model definitions are data, kept in `src/data/*.json` and validated against Zod schemas at load time, so the catalog can be updated without changing logic. The build copies these JSON files into `dist/data/`.
 
 - **Text**: Uses the [Converse API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html) - unified interface across all text models
 - **Image**: Uses [InvokeModel](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html) with model-specific request formats (handled internally)

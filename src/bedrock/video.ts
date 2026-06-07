@@ -1,25 +1,13 @@
 import {
-  BedrockRuntimeClient,
   StartAsyncInvokeCommand,
   GetAsyncInvokeCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 import type { DocumentType } from "@smithy/types";
+import { bearerToken, bedrockFetch, getClient } from "./client.js";
 
-// Note: amazon.nova-reel-v1:1 is currently the only Bedrock video generation
-// model. As of 2026-05-21 it is marked LEGACY in modelLifecycle.status, but
-// no ACTIVE replacement exists yet. Keep using it until AWS publishes a
-// successor (likely under the Nova 2 line).
+// amazon.nova-reel-v1:1 is the current Bedrock text-to-video model, invoked
+// asynchronously via StartAsyncInvoke with S3 output.
 const VIDEO_MODEL_ID = "amazon.nova-reel-v1:1";
-
-const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
-const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK;
-
-let sdkClient: BedrockRuntimeClient | undefined;
-
-function getClient(): BedrockRuntimeClient {
-  sdkClient ??= new BedrockRuntimeClient({ region });
-  return sdkClient;
-}
 
 export interface VideoOptions {
   prompt: string;
@@ -85,14 +73,8 @@ export async function startVideoGeneration(options: VideoOptions): Promise<Video
   } catch (sdkErr) {
     if (!bearerToken) throw sdkErr;
 
-    // Raw HTTP fallback
-    const url = `https://bedrock-runtime.${region}.amazonaws.com/async-invoke`;
-    const response = await fetch(url, {
+    const json = (await bedrockFetch("async-invoke", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${bearerToken}`,
-      },
       body: JSON.stringify({
         modelId: VIDEO_MODEL_ID,
         modelInput,
@@ -100,12 +82,7 @@ export async function startVideoGeneration(options: VideoOptions): Promise<Video
           s3OutputDataConfig: { s3Uri: options.s3Uri },
         },
       }),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Bedrock API error (${response.status}): ${text}`);
-    }
-    const json = (await response.json()) as { invocationArn?: string };
+    })) as { invocationArn?: string };
     return {
       invocationArn: json.invocationArn ?? "",
       s3Uri: options.s3Uri,
@@ -128,19 +105,12 @@ export async function getVideoStatus(invocationArn: string): Promise<VideoStatus
   } catch (sdkErr) {
     if (!bearerToken) throw sdkErr;
 
-    // Raw HTTP fallback - extract the invocation ID from ARN
+    // Raw HTTP fallback - extract the invocation ID from the ARN
     const parts = invocationArn.split("/");
     const invocationId = parts[parts.length - 1];
-    const url = `https://bedrock-runtime.${region}.amazonaws.com/async-invoke/${invocationId}`;
-    const response = await fetch(url, {
+    const json = (await bedrockFetch(`async-invoke/${invocationId}`, {
       method: "GET",
-      headers: { Authorization: `Bearer ${bearerToken}` },
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Bedrock API error (${response.status}): ${text}`);
-    }
-    const json = (await response.json()) as {
+    })) as {
       status?: string;
       outputDataConfig?: { s3OutputDataConfig?: { s3Uri?: string } };
       submitTime?: string;

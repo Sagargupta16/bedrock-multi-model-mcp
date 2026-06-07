@@ -1,11 +1,11 @@
 import {
-  BedrockRuntimeClient,
   ConverseCommand,
   type Message,
   type SystemContentBlock,
   type InferenceConfiguration,
 } from "@aws-sdk/client-bedrock-runtime";
-import { resolveModelId, getModelInfo } from "./models.js";
+import { resolveModelId, getModelInfo } from "../models.js";
+import { bearerToken, bedrockFetch, getClient } from "./client.js";
 
 export interface ConverseOptions {
   modelId: string;
@@ -31,38 +31,6 @@ interface ConverseResponse {
   metrics?: { latencyMs?: number };
 }
 
-let sdkClient: BedrockRuntimeClient | undefined;
-
-const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
-const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK;
-
-function getSdkClient(): BedrockRuntimeClient {
-  sdkClient ??= new BedrockRuntimeClient({ region });
-  return sdkClient;
-}
-
-// Raw HTTP fallback for bearer token auth if the SDK doesn't pick it up.
-async function converseViaHttp(
-  modelId: string,
-  body: Record<string, unknown>,
-): Promise<ConverseResponse> {
-  const url = `https://bedrock-runtime.${region}.amazonaws.com/model/${encodeURIComponent(modelId)}/converse`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${bearerToken}`,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Bedrock API error (${response.status}): ${text}`);
-  }
-  return (await response.json()) as ConverseResponse;
-}
-
 export async function converse(options: ConverseOptions): Promise<ConverseResult> {
   const resolvedId = resolveModelId(options.modelId);
   const info = getModelInfo(resolvedId);
@@ -80,12 +48,9 @@ export async function converse(options: ConverseOptions): Promise<ConverseResult
     maxTokens: options.maxTokens ?? defaultMax,
   };
 
-  // Some models (e.g. Opus 4.7) reject the temperature parameter
+  // Some models (e.g. Opus 4.7+) reject the temperature parameter, so omit it.
   if (!info?.noTemperature) {
     inferenceConfig.temperature = options.temperature ?? 0.7;
-  } else if (options.temperature !== undefined) {
-    // User explicitly set temperature — warn but still omit
-    // (model will reject it regardless)
   }
 
   const start = Date.now();
@@ -102,7 +67,7 @@ export async function converse(options: ConverseOptions): Promise<ConverseResult
       system,
       inferenceConfig,
     });
-    const response = await getSdkClient().send(command);
+    const response = await getClient().send(command);
 
     const outputContent = response.output?.message?.content;
     text = outputContent?.map((b) => ("text" in b ? b.text : "")).join("") ?? "";
@@ -124,7 +89,11 @@ export async function converse(options: ConverseOptions): Promise<ConverseResult
       body.system = system.map((s) => ("text" in s ? { text: s.text } : s));
     }
 
-    const response = await converseViaHttp(resolvedId, body);
+    const response = (await bedrockFetch(
+      `model/${encodeURIComponent(resolvedId)}/converse`,
+      { method: "POST", body: JSON.stringify(body) },
+    )) as ConverseResponse;
+
     const outputContent = response.output?.message?.content;
     text = outputContent?.map((b) => b.text ?? "").join("") ?? "";
     inputTokens = response.usage?.inputTokens ?? 0;

@@ -1,6 +1,6 @@
 {
   "name": "bedrock-multi-model-mcp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "MCP server for invoking any AWS Bedrock model via the unified Converse API",
   "type": "module",
   "main": "dist/index.js",
@@ -8,15 +8,18 @@
     "bedrock-multi-model-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.test.*"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run copy-data",
+    "copy-data": "node --eval \"const{cpSync,mkdirSync}=require('node:fs');mkdirSync('dist/data',{recursive:true});cpSync('src/data','dist/data',{recursive:true});\"",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
     "clean": "rimraf dist",
     "lint": "tsc --noEmit",
-    "test": "node --test dist/**/*.test.js"
+    "test": "npm run build && node --test dist/**/*.test.js",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [
     "mcp",
@@ -26,8 +29,9 @@
     "llama",
     "mistral",
     "nova",
-    "cohere",
+    "qwen",
     "deepseek",
+    "gpt-oss",
     "multi-model",
     "converse-api"
   ],
@@ -42,7 +46,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1030.0",
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
