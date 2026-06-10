@@ -3,23 +3,47 @@ import {
   GetAsyncInvokeCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 import type { DocumentType } from "@smithy/types";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { z } from "zod";
+import { VideoModelSchema, type VideoModel } from "../types.js";
 import { bearerToken, bedrockFetch, getClient } from "./client.js";
 
-// amazon.nova-reel-v1:1 is the current Bedrock text-to-video model, invoked
-// asynchronously via StartAsyncInvoke with S3 output.
-const VIDEO_MODEL_ID = "amazon.nova-reel-v1:1";
+// Video model catalog loaded and validated from src/data/video-models.json.
+// All video models are invoked asynchronously via StartAsyncInvoke with S3
+// output, but each provider has its own modelInput shape.
+const dataDir = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
+const raw = readFileSync(join(dataDir, "video-models.json"), "utf-8");
+export const VIDEO_MODELS: VideoModel[] = z
+  .array(VideoModelSchema)
+  .parse(JSON.parse(raw));
+
+// alias -> model
+const VIDEO_ALIASES: Record<string, VideoModel> = Object.fromEntries(
+  VIDEO_MODELS.flatMap((m) => m.aliases.map((a) => [a.toLowerCase(), m])),
+);
+
+export function getVideoModel(alias: string): VideoModel | undefined {
+  return VIDEO_ALIASES[alias.toLowerCase()];
+}
+
+const DEFAULT_VIDEO_MODEL = "luma-ray";
 
 export interface VideoOptions {
+  model?: string;
   prompt: string;
   s3Uri: string;
   durationSeconds?: number;
-  seed?: number;
 }
 
 export interface VideoStartResult {
+  modelId: string;
+  modelName: string;
   invocationArn: string;
   s3Uri: string;
   durationSeconds: number;
+  region?: string;
 }
 
 export interface VideoStatusResult {
@@ -30,71 +54,84 @@ export interface VideoStatusResult {
   endTime?: string;
 }
 
-export async function startVideoGeneration(options: VideoOptions): Promise<VideoStartResult> {
-  const duration = options.durationSeconds ?? 6;
-  const isMultiShot = duration > 6;
+// Luma Ray 2 supports only 5s or 9s durations, expressed as strings.
+function buildLumaRayInput(options: VideoOptions, duration: number): Record<string, unknown> {
+  return {
+    prompt: options.prompt,
+    aspect_ratio: "16:9",
+    duration: duration >= 9 ? "9s" : "5s",
+    resolution: "720p",
+    loop: false,
+  };
+}
 
-  const modelInput = isMultiShot
-    ? {
-        taskType: "MULTI_SHOT_AUTOMATED",
-        multiShotAutomatedParams: { text: options.prompt },
-        videoGenerationConfig: {
-          durationSeconds: duration,
-          fps: 24,
-          dimension: "1280x720",
-          seed: options.seed ?? 42,
-        },
-      }
-    : {
-        taskType: "TEXT_VIDEO",
-        textToVideoParams: { text: options.prompt },
-        videoGenerationConfig: {
-          durationSeconds: 6,
-          fps: 24,
-          dimension: "1280x720",
-          seed: options.seed ?? 42,
-        },
-      };
+export async function startVideoGeneration(options: VideoOptions): Promise<VideoStartResult> {
+  const entry = getVideoModel(options.model ?? DEFAULT_VIDEO_MODEL);
+  if (!entry && options.model) {
+    const known = VIDEO_MODELS.flatMap((m) => m.aliases).join(", ");
+    throw new Error(`Unknown video model "${options.model}". Available: ${known}`);
+  }
+  const model = entry ?? VIDEO_MODELS[0];
+  const duration = options.durationSeconds ?? 5;
+  const modelInput = buildLumaRayInput(options, duration);
+  const effectiveDuration = duration >= 9 ? 9 : 5;
 
   try {
     const command = new StartAsyncInvokeCommand({
-      modelId: VIDEO_MODEL_ID,
+      modelId: model.id,
       modelInput: modelInput as unknown as DocumentType,
       outputDataConfig: {
         s3OutputDataConfig: { s3Uri: options.s3Uri },
       },
     });
-    const response = await getClient().send(command);
+    const response = await getClient(model.region).send(command);
     return {
+      modelId: model.id,
+      modelName: model.name,
       invocationArn: response.invocationArn ?? "",
       s3Uri: options.s3Uri,
-      durationSeconds: duration,
+      durationSeconds: effectiveDuration,
+      region: model.region,
     };
   } catch (sdkErr) {
     if (!bearerToken) throw sdkErr;
 
-    const json = (await bedrockFetch("async-invoke", {
-      method: "POST",
-      body: JSON.stringify({
-        modelId: VIDEO_MODEL_ID,
-        modelInput,
-        outputDataConfig: {
-          s3OutputDataConfig: { s3Uri: options.s3Uri },
-        },
-      }),
-    })) as { invocationArn?: string };
+    const json = (await bedrockFetch(
+      "async-invoke",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          modelId: model.id,
+          modelInput,
+          outputDataConfig: {
+            s3OutputDataConfig: { s3Uri: options.s3Uri },
+          },
+        }),
+      },
+      model.region,
+    )) as { invocationArn?: string };
     return {
+      modelId: model.id,
+      modelName: model.name,
       invocationArn: json.invocationArn ?? "",
       s3Uri: options.s3Uri,
-      durationSeconds: duration,
+      durationSeconds: effectiveDuration,
+      region: model.region,
     };
   }
 }
 
-export async function getVideoStatus(invocationArn: string): Promise<VideoStatusResult> {
+export async function getVideoStatus(
+  invocationArn: string,
+  region?: string,
+): Promise<VideoStatusResult> {
+  // The ARN embeds its region (arn:aws:bedrock:REGION:...), so callers don't
+  // have to remember which region the job was started in.
+  const arnRegion = invocationArn.split(":")[3] || region;
+
   try {
     const command = new GetAsyncInvokeCommand({ invocationArn });
-    const response = await getClient().send(command);
+    const response = await getClient(arnRegion).send(command);
     return {
       invocationArn,
       status: response.status ?? "Unknown",
@@ -108,9 +145,11 @@ export async function getVideoStatus(invocationArn: string): Promise<VideoStatus
     // Raw HTTP fallback - extract the invocation ID from the ARN
     const parts = invocationArn.split("/");
     const invocationId = parts[parts.length - 1];
-    const json = (await bedrockFetch(`async-invoke/${invocationId}`, {
-      method: "GET",
-    })) as {
+    const json = (await bedrockFetch(
+      `async-invoke/${invocationId}`,
+      { method: "GET" },
+      arnRegion,
+    )) as {
       status?: string;
       outputDataConfig?: { s3OutputDataConfig?: { s3Uri?: string } };
       submitTime?: string;

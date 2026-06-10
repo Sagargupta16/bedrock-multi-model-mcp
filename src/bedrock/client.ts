@@ -1,19 +1,25 @@
 import { BedrockRuntimeClient } from "@aws-sdk/client-bedrock-runtime";
 
-// Shared region/auth config and a lazily-constructed SDK client, used by
+// Shared region/auth config and lazily-constructed SDK clients, used by
 // every API wrapper (converse, image, video) so credential handling lives
-// in one place.
+// in one place. Models live in different regions (Nova in us-east-1,
+// Stability/Luma in us-west-2), so clients are cached per region.
 
 export const region =
   process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "us-east-1";
 
 export const bearerToken = process.env.AWS_BEARER_TOKEN_BEDROCK;
 
-let sdkClient: BedrockRuntimeClient | undefined;
+const sdkClients = new Map<string, BedrockRuntimeClient>();
 
-export function getClient(): BedrockRuntimeClient {
-  sdkClient ??= new BedrockRuntimeClient({ region });
-  return sdkClient;
+export function getClient(modelRegion?: string): BedrockRuntimeClient {
+  const r = modelRegion ?? region;
+  let client = sdkClients.get(r);
+  if (!client) {
+    client = new BedrockRuntimeClient({ region: r });
+    sdkClients.set(r, client);
+  }
+  return client;
 }
 
 // Raw HTTP fallback for bearer-token auth when the SDK doesn't pick the token
@@ -21,8 +27,10 @@ export function getClient(): BedrockRuntimeClient {
 export async function bedrockFetch(
   path: string,
   init: { method: string; body?: string },
+  modelRegion?: string,
 ): Promise<unknown> {
-  const url = `https://bedrock-runtime.${region}.amazonaws.com/${path}`;
+  const r = modelRegion ?? region;
+  const url = `https://bedrock-runtime.${r}.amazonaws.com/${path}`;
   const response = await fetch(url, {
     method: init.method,
     headers: {

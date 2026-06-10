@@ -1,16 +1,29 @@
 [
   {
-    "id": "amazon.nova-canvas-v1:0",
-    "name": "Nova Canvas",
-    "provider": "Amazon",
-    "aliases": ["nova-canvas"],
-    "maxResolution": "2048x2048"
+    "id": "stability.stable-image-ultra-v1:1",
+    "name": "Stable Image Ultra",
+    "provider": "Stability AI",
+    "aliases": ["stable-ultra"],
+    "maxResolution": "1536x1536",
+    "region": "us-west-2",
+    "format": "stability"
   },
   {
-    "id": "amazon.titan-image-generator-v2:0",
-    "name": "Titan Image Generator v2",
-    "provider": "Amazon",
-    "aliases": ["titan-image"],
-    "maxResolution": "1408x1408"
+    "id": "stability.sd3-5-large-v1:0",
+    "name": "Stable Diffusion 3.5 Large",
+    "provider": "Stability AI",
+    "aliases": ["sd3.5", "sd3-5-large"],
+    "maxResolution": "1536x1536",
+    "region": "us-west-2",
+    "format": "stability"
+  },
+  {
+    "id": "stability.stable-image-core-v1:1",
+    "name": "Stable Image Core",
+    "provider": "Stability AI",
+    "aliases": ["stable-core"],
+    "maxResolution": "1536x1536",
+    "region": "us-west-2",
+    "format": "stability"
   }
 ]

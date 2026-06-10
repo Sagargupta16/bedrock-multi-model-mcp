@@ -1,0 +1,10 @@
+[
+  {
+    "id": "luma.ray-v2:0",
+    "name": "Luma Ray 2",
+    "provider": "Luma AI",
+    "aliases": ["luma-ray", "ray2"],
+    "region": "us-west-2",
+    "format": "luma-ray"
+  }
+]

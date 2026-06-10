@@ -9,14 +9,14 @@ MCP server for AWS Bedrock - text, image, and video generation from any model. U
 | `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. |
 | `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. |
 | `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
-| `bedrock_generate_image` | Generate images from text (Nova Canvas, Titan Image v2). Saves PNG locally. |
-| `bedrock_generate_video` | Start async video generation (Nova Reel). Output to S3. |
+| `bedrock_generate_image` | Generate images from text (Stable Image Ultra, SD3.5 Large, Stable Image Core). Saves PNG locally. |
+| `bedrock_generate_video` | Start async video generation (Luma Ray 2). Output to S3. |
 | `bedrock_video_status` | Check video generation job progress. |
 | `bedrock_embed_similarity` | Embed 2+ texts (Titan, Cohere) and return a cosine-similarity matrix. |
 
 ## Supported Models
 
-Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.json`) - edit those files to add or remove models without touching code.
+Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.json`, `video-models.json`) - edit those files to add or remove models without touching code.
 
 ### Text (Converse API)
 
@@ -33,16 +33,22 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 
 ### Image (InvokeModel API)
 
-| Model | Alias | Max Resolution |
-|-------|-------|----------------|
-| Amazon Nova Canvas | `nova-canvas` | 2048x2048 |
-| Amazon Titan Image Gen v2 | `titan-image` | 1408x1408 |
+| Model | Alias | Max Resolution | Region |
+|-------|-------|----------------|--------|
+| Stable Image Ultra (default) | `stable-ultra` | 1536x1536 | us-west-2 |
+| Stable Diffusion 3.5 Large | `sd3.5` | 1536x1536 | us-west-2 |
+| Stable Image Core | `stable-core` | 1536x1536 | us-west-2 |
 
 ### Video (Async API)
 
-| Model | Duration | Resolution |
-|-------|----------|------------|
-| Amazon Nova Reel | 6s (single shot), 12-120s (multi-shot) | 1280x720 @ 24fps |
+| Model | Alias | Duration | Resolution | Region |
+|-------|-------|----------|------------|--------|
+| Luma Ray 2 | `luma-ray`, `ray2` | 5s or 9s | 720p | us-west-2 |
+
+The output S3 bucket must be in us-west-2 (same region as the model).
+
+Amazon Nova Canvas/Reel and Titan Image were removed when AWS marked them
+end-of-life (Nova Reel EOL 2026-09-30); the registry only ships ACTIVE models.
 
 ### Embeddings (InvokeModel API)
 

@@ -8,6 +8,7 @@ import {
   getModelInfo,
 } from "./models.js";
 import { IMAGE_MODELS, getImageModel } from "./bedrock/image.js";
+import { VIDEO_MODELS, getVideoModel } from "./bedrock/video.js";
 import { EMBEDDING_MODELS, getEmbeddingModel, cosineSimilarity } from "./bedrock/embed.js";
 
 test("text registry loads and validates", () => {
@@ -46,8 +47,35 @@ test("getModelInfo returns metadata for known ids", () => {
 
 test("image registry loads and aliases resolve", () => {
   assert.ok(IMAGE_MODELS.length > 0, "image registry should not be empty");
-  assert.equal(getImageModel("nova-canvas")?.id, "amazon.nova-canvas-v1:0");
-  assert.equal(getImageModel("titan-image")?.id, "amazon.titan-image-generator-v2:0");
+  assert.equal(getImageModel("sd3.5")?.id, "stability.sd3-5-large-v1:0");
+  assert.equal(getImageModel("stable-core")?.id, "stability.stable-image-core-v1:1");
+  assert.equal(getImageModel("stable-ultra")?.id, "stability.stable-image-ultra-v1:1");
+});
+
+test("registries contain no AWS-legacy models", () => {
+  // AWS lifecycle scan 2026-06-10: nova-canvas, nova-reel, titan-image,
+  // jamba-1-5, nova-premier are LEGACY. Keep them out of the registries.
+  const legacy = /nova-canvas|nova-reel|titan-image|jamba-1-5|nova-premier/;
+  for (const m of [...IMAGE_MODELS, ...VIDEO_MODELS, ...TEXT_MODELS]) {
+    assert.ok(!legacy.test(m.id), `${m.id} is AWS-legacy and must not ship`);
+  }
+});
+
+test("stability image models declare format and region", () => {
+  for (const m of IMAGE_MODELS.filter((m) => m.provider === "Stability AI")) {
+    assert.equal(m.format, "stability", `${m.id} must use the stability request format`);
+    assert.equal(m.region, "us-west-2", `${m.id} is only served from us-west-2`);
+  }
+});
+
+test("video registry loads and aliases resolve", () => {
+  assert.ok(VIDEO_MODELS.length > 0, "video registry should not be empty");
+  assert.equal(getVideoModel("luma-ray")?.id, "luma.ray-v2:0");
+  assert.equal(getVideoModel("ray2")?.id, "luma.ray-v2:0");
+});
+
+test("fable-5 alias resolves to the global inference profile", () => {
+  assert.equal(resolveModelId("fable"), "global.anthropic.claude-fable-5");
 });
 
 test("embedding registry loads and aliases resolve", () => {

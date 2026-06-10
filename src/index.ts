@@ -5,7 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { converse } from "./bedrock/converse.js";
 import { generateImage, IMAGE_MODELS, getImageModel } from "./bedrock/image.js";
-import { startVideoGeneration, getVideoStatus } from "./bedrock/video.js";
+import { startVideoGeneration, getVideoStatus, VIDEO_MODELS } from "./bedrock/video.js";
 import { embed, cosineSimilarity, EMBEDDING_MODELS, getEmbeddingModel } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
 
@@ -159,12 +159,13 @@ server.registerTool(
   "bedrock_generate_image",
   {
     description:
-      "Generate an image from a text prompt using AWS Bedrock image models (Amazon Nova Canvas, Titan Image Generator v2). " +
+      "Generate an image from a text prompt using AWS Bedrock image models " +
+      "(Stable Image Ultra, Stable Diffusion 3.5 Large, Stable Image Core). " +
       "Saves the image to the current working directory by default (or output_dir if passed, " +
       "or BEDROCK_MCP_OUTPUT_DIR env var, falling back to ~/bedrock-images/ if cwd is not writable).",
     inputSchema: {
       model: z.string().optional().describe(
-        "Image model alias: 'nova-canvas' (default) or 'titan-image', or a full model ID"
+        "Image model alias: 'stable-ultra' (default, best quality), 'sd3.5', 'stable-core' (fastest/cheapest), or a full model ID"
       ),
       prompt: z.string().describe("Text description of the image to generate"),
       negative_prompt: z.string().optional().describe("What to exclude from the image (e.g. 'blurry, low quality')"),
@@ -181,7 +182,7 @@ server.registerTool(
   async ({ model, prompt, negative_prompt, width, height, seed, output_dir }) => {
     try {
       const result = await generateImage({
-        model: model ?? "nova-canvas",
+        model: model ?? "stable-ultra",
         prompt,
         negativePrompt: negative_prompt,
         width,
@@ -190,7 +191,7 @@ server.registerTool(
         outputDir: output_dir,
       });
 
-      const entry = getImageModel(model ?? "nova-canvas");
+      const entry = getImageModel(model ?? "stable-ultra");
       const label = entry ? `${entry.name} (${entry.provider})` : result.modelId;
 
       const text = `**${label}** - Image generated\n` +
@@ -211,34 +212,38 @@ server.registerTool(
   "bedrock_generate_video",
   {
     description:
-      "Start a video generation job using Amazon Nova Reel. " +
+      "Start a video generation job using Luma Ray 2 on AWS Bedrock. " +
       "Videos are generated asynchronously and saved to an S3 bucket. " +
-      "Returns a job ARN - use bedrock_video_status to check progress.",
+      "Returns a job ARN - use bedrock_video_status to check progress. " +
+      "Note: the output S3 bucket must be in us-west-2 (the model region).",
     inputSchema: {
-      prompt: z.string().describe("Text description of the video to generate (max 512 chars for 6s, 4000 for multi-shot)"),
-      s3_uri: z.string().describe("S3 URI for output (e.g. 's3://my-bucket/videos/')"),
-      duration_seconds: z.number().optional().describe(
-        "Video duration: 6 (default, single shot) or 12-120 in multiples of 6 (multi-shot)"
+      model: z.string().optional().describe(
+        "Video model alias: 'luma-ray' / 'ray2' (default), or a full model ID"
       ),
-      seed: z.number().optional().describe("Random seed for reproducible results"),
+      prompt: z.string().describe("Text description of the video to generate"),
+      s3_uri: z.string().describe("S3 URI for output (e.g. 's3://my-bucket/videos/'). Bucket must be in the model's region."),
+      duration_seconds: z.number().optional().describe(
+        "Video duration in seconds: 5 (default) or 9"
+      ),
     },
     annotations: { openWorldHint: true },
   },
-  async ({ prompt, s3_uri, duration_seconds, seed }) => {
+  async ({ model, prompt, s3_uri, duration_seconds }) => {
     try {
       const result = await startVideoGeneration({
+        model,
         prompt,
         s3Uri: s3_uri,
         durationSeconds: duration_seconds,
-        seed,
       });
 
-      const text = `**Nova Reel** - Video generation started\n` +
-        `Duration: ${result.durationSeconds}s | Resolution: 1280x720 @ 24fps\n\n` +
+      const text = `**${result.modelName}** - Video generation started\n` +
+        `Duration: ${result.durationSeconds}s | Resolution: 720p` +
+        `${result.region ? ` | Region: ${result.region}` : ""}\n\n` +
         `Job ARN: \`${result.invocationArn}\`\n` +
         `Output: \`${result.s3Uri}\`\n\n` +
         `Use \`bedrock_video_status\` to check progress. ` +
-        `Expected time: ~${result.durationSeconds <= 6 ? "90 seconds" : Math.ceil(result.durationSeconds / 6) * 1.5 + " minutes"}.`;
+        `Expected time: ~90 seconds.`;
 
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
@@ -254,7 +259,7 @@ server.registerTool(
   "bedrock_video_status",
   {
     description:
-      "Check the status of a Nova Reel video generation job. " +
+      "Check the status of a Bedrock video generation job (Luma Ray 2). " +
       "Returns status (InProgress, Completed, Failed) and output location.",
     inputSchema: {
       invocation_arn: z.string().describe("The job ARN returned by bedrock_generate_video"),
@@ -337,6 +342,7 @@ server.registerTool(
 
 // Touch the catalogs so the imports are retained and they validate at startup.
 void IMAGE_MODELS;
+void VIDEO_MODELS;
 void EMBEDDING_MODELS;
 
 // Start the server

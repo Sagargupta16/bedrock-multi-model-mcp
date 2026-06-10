@@ -72,10 +72,46 @@ async function resolveOutputDir(explicit?: string): Promise<string> {
   return join(homedir(), "bedrock-images");
 }
 
+// Stability models take an aspect ratio instead of explicit dimensions.
+function toAspectRatio(width: number, height: number): string {
+  const supported: [string, number][] = [
+    ["1:1", 1],
+    ["16:9", 16 / 9],
+    ["9:16", 9 / 16],
+    ["3:2", 3 / 2],
+    ["2:3", 2 / 3],
+    ["4:5", 4 / 5],
+    ["5:4", 5 / 4],
+    ["21:9", 21 / 9],
+    ["9:21", 9 / 21],
+  ];
+  const target = width / height;
+  let best = supported[0];
+  for (const entry of supported) {
+    if (Math.abs(entry[1] - target) < Math.abs(best[1] - target)) best = entry;
+  }
+  return best[0];
+}
+
 // Nova Canvas and Titan Image Generator v2 share the Amazon image request
-// shape (taskType TEXT_IMAGE + textToImageParams + imageGenerationConfig) and
-// both return { images: [base64Png] }.
-function buildRequestBody(options: ImageOptions, width: number, height: number): string {
+// shape (taskType TEXT_IMAGE + textToImageParams + imageGenerationConfig).
+// Stability models (SD3.5, Core, Ultra) use prompt + aspect_ratio. Both
+// return { images: [base64] }.
+function buildRequestBody(
+  options: ImageOptions,
+  width: number,
+  height: number,
+  format: ImageModel["format"],
+): string {
+  if (format === "stability") {
+    return JSON.stringify({
+      prompt: options.prompt,
+      ...(options.negativePrompt && { negative_prompt: options.negativePrompt }),
+      aspect_ratio: toAspectRatio(width, height),
+      output_format: "png",
+      ...(options.seed !== undefined && { seed: options.seed }),
+    });
+  }
   return JSON.stringify({
     taskType: "TEXT_IMAGE",
     textToImageParams: {
@@ -95,10 +131,11 @@ function buildRequestBody(options: ImageOptions, width: number, height: number):
 export async function generateImage(options: ImageOptions): Promise<ImageResult> {
   const entry = getImageModel(options.model);
   const modelId = entry?.id ?? options.model;
+  const modelRegion = entry?.region;
   const width = options.width ?? 1024;
   const height = options.height ?? 1024;
 
-  const body = buildRequestBody(options, width, height);
+  const body = buildRequestBody(options, width, height, entry?.format);
   const start = Date.now();
   let responseBody: string;
 
@@ -109,14 +146,15 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
       contentType: "application/json",
       accept: "application/json",
     });
-    const response = await getClient().send(command);
+    const response = await getClient(modelRegion).send(command);
     responseBody = new TextDecoder().decode(response.body);
   } catch (sdkErr) {
     if (!bearerToken) throw sdkErr;
-    const json = await bedrockFetch(`model/${encodeURIComponent(modelId)}/invoke`, {
-      method: "POST",
-      body,
-    });
+    const json = await bedrockFetch(
+      `model/${encodeURIComponent(modelId)}/invoke`,
+      { method: "POST", body },
+      modelRegion,
+    );
     responseBody = JSON.stringify(json);
   }
 
