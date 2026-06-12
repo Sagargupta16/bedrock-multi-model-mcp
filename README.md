@@ -16,19 +16,18 @@ MCP server for AWS Bedrock - text, image, and video generation from any model. U
 
 ## Supported Models
 
-Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.json`, `video-models.json`) - edit those files to add or remove models without touching code.
+Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.json`, `video-models.json`, `embedding-models.json`) - edit those files to add or remove models without touching code.
 
 ### Text (Converse API)
 
 | Provider | Models | Aliases |
 |----------|--------|---------|
-| Anthropic | Claude Opus 4.8 / 4.7 / 4.6, Sonnet 4.6, Haiku 4.5 | `claude-opus`, `claude-sonnet`, `claude-haiku` |
+| Anthropic | Claude Fable 5, Opus 4.8 / 4.7 / 4.6, Sonnet 4.6, Haiku 4.5 | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
 | Meta | Llama 4 Maverick, Llama 4 Scout, Llama 3.3 70B | `llama4`, `llama4-scout`, `llama3.3` |
 | Mistral | Mistral Large 3, Devstral 2, Mistral Small, Pixtral Large | `mistral-large`, `devstral`, `mistral-small`, `pixtral` |
-| Amazon | Nova Premier, Nova Pro, Nova 2 Lite, Nova Lite, Nova Micro | `nova-premier`, `nova-pro`, `nova2-lite`, `nova-lite`, `nova-micro` |
+| Amazon | Nova Pro, Nova 2 Lite, Nova Lite, Nova Micro | `nova-pro`, `nova2-lite`, `nova-lite`, `nova-micro` |
 | Qwen | Qwen3 Coder Next, Qwen3 VL 235B | `qwen-coder`, `qwen-vl` |
 | DeepSeek | DeepSeek V3.2, DeepSeek R1 | `deepseek`, `deepseek-r1` |
-| AI21 | Jamba 1.5 Large | `jamba` |
 | OpenAI | GPT-OSS 120B, GPT-OSS 20B | `gpt-oss`, `gpt-oss-20b` |
 
 ### Image (InvokeModel API)
@@ -135,7 +134,7 @@ The server supports two auth methods:
 ### Generate an image
 
 ```
-"Use bedrock_generate_image with nova-canvas: A futuristic Tokyo street at night, neon lights, rain"
+"Use bedrock_generate_image with stable-ultra: A futuristic Tokyo street at night, neon lights, rain"
 ```
 
 ### Generate a video
@@ -166,6 +165,7 @@ src/
   data/
     text-models.json       # Text model registry (data, not code)
     image-models.json      # Image model registry
+    video-models.json      # Video model registry
     embedding-models.json  # Embedding model registry
 ```
 
