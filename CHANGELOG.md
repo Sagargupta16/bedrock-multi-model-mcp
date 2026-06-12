@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- AWS-legacy models purged after a lifecycle scan (supersedes parts of 0.3.0 below): image generation moved from Amazon Nova Canvas + Titan Image Generator v2 (EOL) to Stability (Stable Image Ultra, SD3.5 Large), video from Nova Reel to Luma Ray 2, and Nova Premier / AI21 entries removed from the text registry. `src/models.test.ts` now bans the removed IDs as LEGACY.
+- Claude Fable 5 (`global.anthropic.claude-fable-5`) added to the text registry as the most capable model.
+- Opus 4.7 / 4.6 `useCase` relabeled "Previous-gen Opus reasoning" (Opus 4.8 is the Opus-tier flagship); stale Nova Reel comment and multi-shot output line removed; AI21 dropped from the provider-filter example.
+
 ## [0.3.0] - 2026-06-07
 
 ### Fixed
