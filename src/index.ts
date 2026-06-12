@@ -121,7 +121,7 @@ server.registerTool(
       "Filter by provider name if needed.",
     inputSchema: {
       provider: z.string().optional().describe(
-        "Filter by provider (e.g. 'Anthropic', 'Meta', 'Mistral', 'Amazon', 'Qwen', 'AI21', 'DeepSeek', 'OpenAI')"
+        "Filter by provider (e.g. 'Anthropic', 'Meta', 'Mistral', 'Amazon', 'Qwen', 'DeepSeek', 'OpenAI')"
       ),
     },
     annotations: { readOnlyHint: true },
@@ -207,7 +207,7 @@ server.registerTool(
 );
 
 // --- Tool: bedrock_generate_video ---
-// Start an async video generation job using Nova Reel.
+// Start an async video generation job using Luma Ray 2.
 server.registerTool(
   "bedrock_generate_video",
   {
@@ -275,8 +275,7 @@ server.registerTool(
       if (result.endTime) text += `Finished: ${result.endTime}\n`;
 
       if (result.status === "Completed" && result.s3Uri) {
-        text += `\nOutput: \`${result.s3Uri}/output.mp4\`\n`;
-        text += `Individual shots also available at \`${result.s3Uri}/shot_XXXX.mp4\``;
+        text += `\nOutput: \`${result.s3Uri}/output.mp4\``;
       } else if (result.status === "InProgress") {
         text += `\nStill generating... check again in a minute.`;
       }
