@@ -15,9 +15,13 @@ export const IMAGE_MODELS: ImageModel[] = z
   .array(ImageModelSchema)
   .parse(JSON.parse(raw));
 
-// alias -> model
+// alias -> model, plus id -> model so a full model ID resolves to its entry
+// (and therefore its request `format`) instead of falling through to the
+// wrong Amazon request shape.
 const IMAGE_ALIASES: Record<string, ImageModel> = Object.fromEntries(
-  IMAGE_MODELS.flatMap((m) => m.aliases.map((a) => [a.toLowerCase(), m])),
+  IMAGE_MODELS.flatMap((m) =>
+    [...m.aliases, m.id].map((a) => [a.toLowerCase(), m]),
+  ),
 );
 
 export function getImageModel(alias: string): ImageModel | undefined {
