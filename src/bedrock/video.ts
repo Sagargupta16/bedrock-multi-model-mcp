@@ -126,8 +126,13 @@ export async function getVideoStatus(
   region?: string,
 ): Promise<VideoStatusResult> {
   // The ARN embeds its region (arn:aws:bedrock:REGION:...), so callers don't
-  // have to remember which region the job was started in.
-  const arnRegion = invocationArn.split(":")[3] || region;
+  // have to remember which region the job was started in. Validate it against
+  // the AWS region charset: the bearer-token fallback interpolates the region
+  // into the request host, so an unvalidated value (e.g. "us-east-1/@evil.com")
+  // could redirect the Authorization: Bearer header to an attacker's server.
+  const rawRegion = invocationArn.split(":")[3];
+  const arnRegion =
+    rawRegion && /^[a-z]{2}(?:-[a-z]+)+-\d+$/.test(rawRegion) ? rawRegion : region;
 
   try {
     const command = new GetAsyncInvokeCommand({ invocationArn });
@@ -146,7 +151,7 @@ export async function getVideoStatus(
     const parts = invocationArn.split("/");
     const invocationId = parts[parts.length - 1];
     const json = (await bedrockFetch(
-      `async-invoke/${invocationId}`,
+      `async-invoke/${encodeURIComponent(invocationId)}`,
       { method: "GET" },
       arnRegion,
     )) as {

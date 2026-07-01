@@ -50,6 +50,12 @@ test("image registry loads and aliases resolve", () => {
   assert.equal(getImageModel("sd3.5")?.id, "stability.sd3-5-large-v1:0");
   assert.equal(getImageModel("stable-core")?.id, "stability.stable-image-core-v1:1");
   assert.equal(getImageModel("stable-ultra")?.id, "stability.stable-image-ultra-v1:1");
+  // A full model ID must resolve too, so it gets the correct `format`
+  // (else a Stability model receives an Amazon-shaped request and fails).
+  assert.equal(
+    getImageModel("stability.stable-image-ultra-v1:1")?.format,
+    "stability",
+  );
 });
 
 test("registries contain no AWS-legacy models", () => {

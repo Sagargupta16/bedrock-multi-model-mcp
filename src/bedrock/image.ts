@@ -15,9 +15,13 @@ export const IMAGE_MODELS: ImageModel[] = z
   .array(ImageModelSchema)
   .parse(JSON.parse(raw));
 
-// alias -> model
+// alias -> model, plus id -> model so a full model ID resolves to its entry
+// (and therefore its request `format`) instead of falling through to the
+// wrong Amazon request shape.
 const IMAGE_ALIASES: Record<string, ImageModel> = Object.fromEntries(
-  IMAGE_MODELS.flatMap((m) => m.aliases.map((a) => [a.toLowerCase(), m])),
+  IMAGE_MODELS.flatMap((m) =>
+    [...m.aliases, m.id].map((a) => [a.toLowerCase(), m]),
+  ),
 );
 
 export function getImageModel(alias: string): ImageModel | undefined {
@@ -160,8 +164,16 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
 
   const latencyMs = Date.now() - start;
 
-  const parsed = JSON.parse(responseBody) as { images?: string[]; error?: string };
+  const parsed = JSON.parse(responseBody) as {
+    images?: string[];
+    error?: string;
+    // Stability (SD3.5/Core/Ultra) reports content-filter and inference
+    // failures here; a null entry means success. There is no `error` field.
+    finish_reasons?: (string | null)[];
+  };
   if (parsed.error) throw new Error(parsed.error);
+  const finishReason = parsed.finish_reasons?.find((r) => r != null);
+  if (finishReason) throw new Error(`Image generation failed: ${finishReason}`);
   const base64 = parsed.images?.[0];
   if (!base64) throw new Error("Model returned no image data");
 
