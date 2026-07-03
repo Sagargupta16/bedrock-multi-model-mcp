@@ -1,6 +1,6 @@
 [
   {
-    "id": "global.anthropic.claude-fable-5",
+    "id": "us.anthropic.claude-fable-5",
     "name": "Claude Fable 5",
     "provider": "Anthropic",
     "useCase": "Most capable frontier model, 1M context, adaptive reasoning",

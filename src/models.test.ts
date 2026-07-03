@@ -80,8 +80,8 @@ test("video registry loads and aliases resolve", () => {
   assert.equal(getVideoModel("ray2")?.id, "luma.ray-v2:0");
 });
 
-test("fable-5 alias resolves to the global inference profile", () => {
-  assert.equal(resolveModelId("fable"), "global.anthropic.claude-fable-5");
+test("fable-5 alias resolves to the us inference profile", () => {
+  assert.equal(resolveModelId("fable"), "us.anthropic.claude-fable-5");
 });
 
 test("embedding registry loads and aliases resolve", () => {
