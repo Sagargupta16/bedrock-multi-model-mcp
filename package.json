@@ -1,7 +1,7 @@
 {
   "name": "bedrock-multi-model-mcp",
   "version": "0.3.0",
-  "description": "MCP server for invoking any AWS Bedrock model via the unified Converse API",
+  "description": "MCP server for AWS Bedrock - text, image, video, and embeddings across Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS and more",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -52,6 +52,6 @@
   "devDependencies": {
     "@types/node": "^22.15.0",
     "rimraf": "^6.0.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
