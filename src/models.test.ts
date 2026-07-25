@@ -45,6 +45,19 @@ test("getModelInfo returns metadata for known ids", () => {
   assert.equal(info?.noTemperature, true);
 });
 
+test("claude-opus alias points at Opus 5, not a pinned older snapshot", () => {
+  // Bare-tier aliases track the current flagship; version-pinned aliases
+  // (claude-opus-4.8) stay put so an older model is still reachable.
+  assert.equal(resolveModelId("claude-opus"), "us.anthropic.claude-opus-5");
+  assert.equal(resolveModelId("claude-opus-4.8"), "us.anthropic.claude-opus-4-8");
+});
+
+test("Opus 5 omits temperature", () => {
+  // Bedrock returns a 400 ("`temperature` is deprecated for this model")
+  // if temperature is sent, so the registry must flag it.
+  assert.equal(getModelInfo("us.anthropic.claude-opus-5")?.noTemperature, true);
+});
+
 test("image registry loads and aliases resolve", () => {
   assert.ok(IMAGE_MODELS.length > 0, "image registry should not be empty");
   assert.equal(getImageModel("sd3.5")?.id, "stability.sd3-5-large-v1:0");

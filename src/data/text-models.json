@@ -19,12 +19,31 @@
     "noTemperature": true
   },
   {
+    "id": "us.anthropic.claude-opus-5",
+    "name": "Claude Opus 5",
+    "provider": "Anthropic",
+    "useCase": "Opus-tier flagship reasoning, 1M context, adaptive thinking on by default",
+    "aliases": [
+      "claude-opus",
+      "opus-5",
+      "claude-opus-5"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning"
+    ],
+    "maxTokens": 32768,
+    "noTemperature": true
+  },
+  {
     "id": "us.anthropic.claude-opus-4-8",
     "name": "Claude Opus 4.8",
     "provider": "Anthropic",
-    "useCase": "Opus-tier flagship reasoning",
+    "useCase": "Previous-gen Opus reasoning",
     "aliases": [
-      "claude-opus",
       "claude-opus-4.8"
     ],
     "capabilities": [
