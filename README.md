@@ -22,7 +22,7 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 
 | Provider | Models | Aliases |
 |----------|--------|---------|
-| Anthropic | Claude Fable 5, Opus 4.8 / 4.7 / 4.6, Sonnet 4.6, Haiku 4.5 | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
+| Anthropic | Claude Fable 5, Opus 5, Opus 4.8 / 4.7 / 4.6, Sonnet 4.6, Haiku 4.5 | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
 | Meta | Llama 4 Maverick, Llama 4 Scout, Llama 3.3 70B | `llama4`, `llama4-scout`, `llama3.3` |
 | Mistral | Mistral Large 3, Devstral 2, Mistral Small, Pixtral Large | `mistral-large`, `devstral`, `mistral-small`, `pixtral` |
 | Amazon | Nova Pro, Nova 2 Lite, Nova Lite, Nova Micro | `nova-pro`, `nova2-lite`, `nova-lite`, `nova-micro` |
