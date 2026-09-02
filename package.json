@@ -1,6 +1,6 @@
 {
   "name": "bedrock-multi-model-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "MCP server for AWS Bedrock - text, image, video, and embeddings across Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS and more",
   "type": "module",
   "main": "dist/index.js",
