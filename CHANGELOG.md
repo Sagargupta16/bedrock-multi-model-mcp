@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.3.1] - 2026-09-02
+
+### Security
+
+- Bumped transitive dependencies to resolve 16 open Dependabot alerts: `hono` 4.12.25 -> 4.13.5, `@hono/node-server` 1.19.14 -> 1.19.17, `fast-uri` 3.1.2 -> 3.1.7, `ip-address` 10.2.0 -> 10.7.0, `body-parser` 2.2.2 -> 2.3.0, `brace-expansion` 5.0.6 -> 5.0.9. Lockfile-only refresh; `npm audit` now reports 0 vulnerabilities.
 
 ### Changed
 
