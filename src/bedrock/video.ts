@@ -52,6 +52,9 @@ export interface VideoStatusResult {
   s3Uri?: string;
   submitTime?: string;
   endTime?: string;
+  // Set by Bedrock when status is "Failed" - without it a failed job reports
+  // no reason at all.
+  failureMessage?: string;
 }
 
 // Luma Ray 2 supports only 5s or 9s durations, expressed as strings.
@@ -143,6 +146,7 @@ export async function getVideoStatus(
       s3Uri: response.outputDataConfig?.s3OutputDataConfig?.s3Uri,
       submitTime: response.submitTime?.toISOString(),
       endTime: response.endTime?.toISOString(),
+      failureMessage: response.failureMessage,
     };
   } catch (sdkErr) {
     if (!bearerToken) throw sdkErr;
@@ -159,6 +163,7 @@ export async function getVideoStatus(
       outputDataConfig?: { s3OutputDataConfig?: { s3Uri?: string } };
       submitTime?: string;
       endTime?: string;
+      failureMessage?: string;
     };
     return {
       invocationArn,
@@ -166,6 +171,7 @@ export async function getVideoStatus(
       s3Uri: json.outputDataConfig?.s3OutputDataConfig?.s3Uri,
       submitTime: json.submitTime,
       endTime: json.endTime,
+      failureMessage: json.failureMessage,
     };
   }
 }

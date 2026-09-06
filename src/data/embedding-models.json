@@ -21,7 +21,7 @@
     "provider": "Amazon",
     "aliases": ["titan-multimodal"],
     "dimensions": 1024,
-    "modality": "text"
+    "modality": "multimodal"
   },
   {
     "id": "cohere.embed-english-v3",

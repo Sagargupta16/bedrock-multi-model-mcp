@@ -41,9 +41,22 @@ export interface ImageOptions {
 export interface ImageResult {
   modelId: string;
   filePath: string;
-  width: number;
-  height: number;
+  // Measured from the saved file, not echoed from the request: Stability models
+  // take an aspect ratio and pick the pixel dimensions themselves. Undefined if
+  // the payload was not a parsable PNG.
+  width?: number;
+  height?: number;
   latencyMs: number;
+}
+
+// PNG dimensions live in the IHDR chunk: 8-byte signature, 4-byte chunk length,
+// 4-byte "IHDR" type, then width and height as big-endian uint32s.
+// Exported for src/models.test.ts.
+export function readPngSize(png: Buffer): { width: number; height: number } | undefined {
+  if (png.length < 24) return undefined;
+  if (png.readUInt32BE(0) !== 0x89504e47) return undefined;
+  if (png.toString("ascii", 12, 16) !== "IHDR") return undefined;
+  return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
 }
 
 async function isWritable(dir: string): Promise<boolean> {
@@ -181,7 +194,9 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
   await mkdir(outputDir, { recursive: true });
   const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
   const filePath = join(outputDir, `${timestamp}.png`);
-  await writeFile(filePath, Buffer.from(base64, "base64"));
+  const png = Buffer.from(base64, "base64");
+  await writeFile(filePath, png);
 
-  return { modelId, filePath, width, height, latencyMs };
+  const size = readPngSize(png);
+  return { modelId, filePath, width: size?.width, height: size?.height, latencyMs };
 }
