@@ -10,7 +10,7 @@ and choose "Report a vulnerability". That thread is visible only to the maintain
 an advisory is published.
 
 Please include the affected version or commit, what an attacker can do with it, and the
-smallest set of steps that reproduces it. Expect a first response within a few days.
+smallest set of steps that reproduces it.
 
 ## Why this matters here
 

@@ -295,6 +295,8 @@ server.registerTool(
         text += `\nOutput: \`${result.s3Uri}/output.mp4\``;
       } else if (result.status === "InProgress") {
         text += `\nStill generating... check again in a minute.`;
+      } else if (result.failureMessage) {
+        text += `\nReason: ${result.failureMessage}`;
       }
 
       return { content: [{ type: "text" as const, text }] };

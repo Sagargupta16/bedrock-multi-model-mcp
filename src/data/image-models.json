@@ -4,7 +4,6 @@
     "name": "Stable Image Ultra",
     "provider": "Stability AI",
     "aliases": ["stable-ultra"],
-    "maxResolution": "1536x1536",
     "region": "us-west-2",
     "format": "stability"
   },
@@ -13,7 +12,6 @@
     "name": "Stable Diffusion 3.5 Large",
     "provider": "Stability AI",
     "aliases": ["sd3.5", "sd3-5-large"],
-    "maxResolution": "1536x1536",
     "region": "us-west-2",
     "format": "stability"
   },
@@ -22,7 +20,6 @@
     "name": "Stable Image Core",
     "provider": "Stability AI",
     "aliases": ["stable-core"],
-    "maxResolution": "1536x1536",
     "region": "us-west-2",
     "format": "stability"
   }

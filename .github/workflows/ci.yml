@@ -18,8 +18,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The declared engines floor (>=22) and the current Active LTS.
-        node-version: [22, 24]
+        # The declared engines floor (>=22, in maintenance), the Active LTS (24)
+        # and the Current line (26, LTS on 2026-10-28) so nothing ships
+        # untested on the newest runtime.
+        node-version: [22, 24, 26]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

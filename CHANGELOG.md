@@ -6,35 +6,39 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- Claude Fable 5.1 (`us.anthropic.claude-fable-5-1`) and Claude Sonnet 5 (`us.anthropic.claude-sonnet-5`) in the text registry, both with `noTemperature: true`. Anthropic's live docs list them as current (Fable 5 and Sonnet 4.6 moved to "legacy, still available"). Both IDs already resolved on Bedrock but were unreachable through this server: with no registry entry, `converse.ts` sent its default `temperature` and every call failed with `400 ... temperature is deprecated for this model.`
-- `CONTRIBUTING.md` (setup, the two checks, and the rule that a new model ID is live-probed and gets a `models.test.ts` assertion before it lands) and `SECURITY.md` (private reporting route, and what is in scope for a server that brokers AWS credentials).
-- README: a Troubleshooting table keyed on the exact error strings the server surfaces, a Claude Desktop config block (with the `BEDROCK_MCP_OUTPUT_DIR` note for its write-protected spawn directory), a per-model billing note on `bedrock_compare`, an `AWS_DEFAULT_REGION` row in the env table, and CI/license/activity badges.
+- Claude Fable 5.1 (`us.anthropic.claude-fable-5-1`) and Claude Sonnet 5 (`us.anthropic.claude-sonnet-5`) in the text registry, both flagged `noTemperature`. Bare `fable` and `claude-sonnet` now point at them.
+- `CONTRIBUTING.md` (setup, the two checks, the rules for adding a model) and `SECURITY.md` (private reporting route, and what is in scope for a server that brokers AWS credentials).
+- README: a Troubleshooting table, a Claude Desktop config block, a per-model billing note on `bedrock_compare`, an `AWS_DEFAULT_REGION` row in the env table, and CI/license/activity badges.
+- Tests for `readPngSize` and for the `package.json` version path. The capability check now asserts the schema rejects an unknown token, instead of iterating a registry that Zod has already validated at import.
 
 ### Fixed
 
-- `bedrock_generate_image` reported a fabricated output size again - a regression of the 0.3.0 fix, reintroduced when image generation moved to the Stability request shape. Stability models receive only an `aspect_ratio`, so the requested `width`/`height` were echoed back verbatim. Measured 2026-09-06: a `stable-core` call for 1920x1080 reported `Size: 1920x1080` and wrote a 2016x1152 PNG. The size now comes from the saved PNG's IHDR chunk, and is omitted from the response when the payload is not a parsable PNG.
-- `src/index.ts` hardcoded `version: "0.3.0"` while `package.json` was `0.3.1`, so every MCP client was told the wrong server version. It now reads the version from `package.json` and cannot drift.
-- Bare `claude-sonnet` resolved to legacy Sonnet 4.6 and bare `fable` to Fable 5, against this repo's own convention that bare-tier aliases track the current model in their tier. They now resolve to Sonnet 5 and Fable 5.1; `claude-sonnet-4.6` and `fable-5` keep the previous generation reachable.
+- `bedrock_generate_image` reported the requested size, not the real one: Stability models receive only an `aspect_ratio`, so `width`/`height` were echoed back verbatim. Measured 2026-09-06 - a `stable-core` request for 1920x1080 reported `Size: 1920x1080` and wrote a 2016x1152 PNG. The size now comes from the saved PNG's IHDR chunk, and is omitted when the payload is not a parsable PNG.
+- `bedrock_video_status` read only `status`, so a failed job reported no cause. It now reads `failureMessage` and prints it as `Reason:`.
+- `src/index.ts` hardcoded `version: "0.3.0"` while `package.json` was `0.3.1`. It now reads the version from `package.json` and cannot drift.
+- Bare `claude-sonnet` resolved to Sonnet 4.6 and bare `fable` to Fable 5, against this repo's convention that bare-tier aliases track the current model in their tier. They now resolve to Sonnet 5 and Fable 5.1, with `claude-sonnet-4.6` and `fable-5` keeping the previous generation reachable.
 - Claude Fable 5 declared `tool-use` where every other entry uses `tool_use` (printed verbatim in the `bedrock_list_models` Capabilities column) and was the only Anthropic entry missing `streaming`.
-- `duration_seconds` on `bedrock_generate_video` accepted any number and silently coerced anything below 9 to 5, so a caller asking for 7 got a 5-second video reported as 5s. It is now `5 | 9`, rejected at the schema boundary.
 - `amazon.titan-embed-image-v1` was labeled `modality: "text"` while named "Titan Multimodal Embeddings"; corrected to `multimodal`, with a README note that `bedrock_embed_similarity` only exercises its text path.
+- Dropped `maxResolution: "1536x1536"` from the image registry and its schema. Nothing read it, and the measured 2016x1152 output contradicts it.
 
 ### Changed
 
-- `engines.node` raised from `>=20.0.0` to `>=22.0.0`. Node 20 reached end of life on 2026-04-30; 22 is the oldest supported line. README prerequisite updated to match.
-- CI now runs a Node 22 + 24 matrix (the declared floor and the current Active LTS) instead of Node 22 alone, on `actions/checkout@v7` and `actions/setup-node@v7` (both were a major behind), with `permissions: contents: read` and a ref-keyed concurrency group that cancels superseded runs.
+- **Breaking:** `duration_seconds` on `bedrock_generate_video` is now `5 | 9` instead of any number. It used to coerce anything below 9 to 5, so a caller passing 7 got a 5-second video; that call is now rejected at the schema boundary. Pass 5 or 9.
+- **Breaking:** bare `claude-sonnet` and `fable` resolve to entries that omit `temperature`, which Anthropic deprecated for Claude Opus 4.7 and later. The argument is still accepted but has no effect through those aliases; pin `claude-sonnet-4.6` or use `claude-haiku` to set it.
+- `engines.node` raised from `>=20.0.0` to `>=22.0.0`. Node 20 reached end of life on 2026-04-30. README prerequisite updated to match.
+- CI now runs a Node 22 / 24 / 26 matrix instead of Node 22 alone, on `actions/checkout@v7` and `actions/setup-node@v7` (both were a major behind), with `permissions: contents: read` and a ref-keyed concurrency group that cancels superseded runs.
 - `useCase` labels follow Anthropic's current lineup: Fable 5 and Sonnet 4.6 relabeled previous-gen (matching how Opus 4.8 / 4.7 / 4.6 are already handled), and Opus 5 described as the recommended starting point.
-- `TextModelSchema.capabilities` is now a closed `z.enum` over the known tokens, so the next capability typo fails at registry load instead of reaching the tool output. `models.test.ts` asserts it too.
-- `width` / `height` on `bedrock_generate_image` are documented for what they actually do - pick the closest supported aspect ratio - instead of "must be divisible by 16", which never applied to the Stability models. The README image table lists the supported ratios instead of a "Max Resolution" that the measured output contradicted.
-- Dependency refresh inside the existing ranges (lockfile only): `@aws-sdk/client-bedrock-runtime` 3.1030.0 -> 3.1127.0, `@modelcontextprotocol/sdk` 1.29.0 -> 1.30.0, `zod` 4.3.6 -> 4.5.4, `@types/node` 22.19.17 -> 22.20.1. The AWS SDK bump inlines its Smithy dependencies, dropping 63 transitive packages from the lockfile. `npm audit` reports 0 vulnerabilities.
+- `TextModelSchema.capabilities` is now a closed `z.enum` over the known tokens, so the next capability typo fails at registry load instead of reaching the tool output.
+- `width` / `height` on `bedrock_generate_image` are documented for what they actually do - pick the closest supported aspect ratio - instead of "must be divisible by 16", which never applied to the Stability models. The README image table lists the supported ratios instead of a max resolution.
+- Dependency refresh, lockfile only: `@aws-sdk/client-bedrock-runtime` 3.1030.0 -> 3.1127.0, `@modelcontextprotocol/sdk` 1.29.0 -> 1.30.0, `zod` 4.3.6 -> 4.5.4, `@types/node` 22.19.17 -> 22.20.1. 40 packages change version, 65 transitive packages drop and 2 are added. The transitive `@hono/node-server` crosses a major (1.19.17 -> 2.1.1) because the MCP SDK widened its range to `^1.19.9 || ^2.0.5`. `npm audit` reports 0 vulnerabilities.
 - `CLAUDE.md` said "No CI workflows"; a lint + test workflow has existed since 2026-07-04.
-- `.gitignore`: dropped the `!jest.config.js` / `!eslint.config.js` negations and the `.next/` entry - this repo uses neither Jest nor ESLint (tests are `node:test`, `lint` is `tsc --noEmit`) and is not a Next.js app.
 
 ## [0.3.1] - 2026-09-02
 
 ### Security
 
 - Bumped transitive dependencies to resolve 16 open Dependabot alerts: `hono` 4.12.25 -> 4.13.5, `@hono/node-server` 1.19.14 -> 1.19.17, `fast-uri` 3.1.2 -> 3.1.7, `ip-address` 10.2.0 -> 10.7.0, `body-parser` 2.2.2 -> 2.3.0, `brace-expansion` 5.0.6 -> 5.0.9. Lockfile-only refresh; `npm audit` now reports 0 vulnerabilities.
+- `qs` 6.15.2 -> 6.16.0 for GHSA-x5fp-wj9c-mxmx, an array-limit bypass via bracket-key comma parsing (medium). 6.15.2 sat inside the affected range `>= 6.14.2, <= 6.15.3`; 6.16.0 is the first patched release. Transitive through `body-parser` and `express`, so lockfile only (2026-09-05).
 
 ### Added
 

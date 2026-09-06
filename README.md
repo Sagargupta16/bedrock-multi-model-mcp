@@ -38,9 +38,17 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 
 Bare-tier aliases (`fable`, `claude-opus`, `claude-sonnet`, `claude-haiku`) track the
 current model in that tier; version-pinned aliases (`fable-5`, `claude-opus-4.8`,
-`claude-sonnet-4.6`) keep the previous generation reachable. Anthropic's current
-lineup is Claude Fable 5.1, Opus 5, Sonnet 5 and Haiku 4.5; the 4.x Opus / Sonnet
-entries and Fable 5 are listed by Anthropic as legacy but still available.
+`claude-sonnet-4.6`) keep the previous generation reachable. As of 2026-09-06
+Anthropic's current lineup is Claude Fable 5.1, Opus 5, Sonnet 5 and Haiku 4.5, and
+its models overview lists the 4.x Opus / Sonnet entries and Fable 5 under "Legacy
+models (still available)".
+
+`temperature` is the one thing that differs across those entries. Anthropic deprecated
+`temperature` / `top_p` / `top_k` for Claude Opus 4.7 and later, where a non-default
+value returns a 400, so `text-models.json` marks those entries `noTemperature` and this
+server omits the parameter for them - the `temperature` argument is accepted but has no
+effect. Claude Haiku 4.5, Opus 4.6 and Sonnet 4.6 still honor it, so pin
+`claude-sonnet-4.6` or use `claude-haiku` if you need to set it.
 
 The `maxTokens` value in `text-models.json` is the default output cap **this server**
 sends when a call omits `max_tokens` - deliberately below the model's own ceiling
@@ -93,7 +101,7 @@ You can also pass any valid Bedrock model ID directly. Note: many foundation mod
 
 ### Prerequisites
 
-- Node.js >= 22 (Node 20 reached end of life on 2026-04-30; CI runs 22 and 24)
+- Node.js >= 22 (Node 20 reached end of life on 2026-04-30; CI runs 22, 24 and 26)
 - AWS credentials configured (bearer token, env vars, `~/.aws/credentials`, SSO, or IAM role)
 - Bedrock model access enabled in your AWS account (request access in the AWS Console under Bedrock > Model access)
 
@@ -240,9 +248,9 @@ Model definitions are data, kept in `src/data/*.json` and validated against Zod 
 | Error | Cause | Fix |
 |-------|-------|-----|
 | `The provided model identifier is invalid.` | The ID does not resolve on Bedrock - usually a missing `us.` cross-region inference profile prefix, or a model that is not offered in your region. | Use a registry alias (`bedrock_list_models`), or add the `us.` prefix to the full ID. |
-| `` `temperature` is deprecated for this model. `` | A current Claude model was reached without a registry entry, so the server sent its default `temperature`. Current Claude models reject the parameter outright. | Call it through a registered alias, or add a registry entry with `"noTemperature": true` in `src/data/text-models.json`. |
+| `` `temperature` is deprecated for this model. `` | A Claude 4.7-or-later model was reached without a registry entry, so the server sent its default `temperature` of 0.7. Anthropic deprecated `temperature` / `top_p` / `top_k` for Claude Opus 4.7 and later, and a non-default value returns a 400 there. Earlier models (Haiku 4.5, Opus 4.6, Sonnet 4.6) still accept it. | Call it through a registered alias, or add a registry entry with `"noTemperature": true` in `src/data/text-models.json`. |
 | `AccessDeniedException` | Model access has not been granted to your account. | AWS Console > Bedrock > Model access, request the model, retry once it shows Access granted. |
-| Video job starts but never produces output | The output S3 bucket is not in the model's region. | Point `s3_uri` at a bucket in `us-west-2` (Luma Ray 2's region). |
+| `bedrock_video_status` reports `Failed` | Bedrock returns the reason on the job itself. | Read the `Reason:` line printed under the status and fix what it names. |
 
 Error strings are surfaced verbatim from Bedrock. Note that the `temperature` one is a
 registry gap in this server, not an IAM or model-access problem - there is nothing to
@@ -254,16 +262,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, the two required checks, and t
 for adding a model (registry data + a test assertion + a live probe of the model ID).
 Security issues go through the private route in [SECURITY.md](SECURITY.md), not a public
 issue.
-
-## More AI Developer Tools
-
-| Repo | What it does |
-|------|--------------|
-| [mcp-toolkit](https://github.com/Sagargupta16/mcp-toolkit) | TypeScript middleware toolkit for MCP servers - authentication, caching, rate limiting, CORS, logging |
-| [claude-cost-optimizer](https://github.com/Sagargupta16/claude-cost-optimizer) | Strategies, benchmarks, and configs for cutting Claude Code costs |
-| [ai-git-hooks](https://github.com/Sagargupta16/ai-git-hooks) | AI-powered git hooks - review diffs, generate commit messages, scan for secrets |
-| [claude-code-recipes](https://github.com/Sagargupta16/claude-code-recipes) | Copy-paste recipes for Claude Code commands, subagents, hooks, skills, and MCP |
-| [agent-recipes](https://github.com/Sagargupta16/agent-recipes) | Copy-paste AI agent workflows for code review, testing, and DevOps automation |
 
 ## License
 

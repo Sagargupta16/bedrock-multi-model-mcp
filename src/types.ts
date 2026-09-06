@@ -31,7 +31,9 @@ export const ImageModelSchema = z.object({
   name: z.string(),
   provider: z.string(),
   aliases: z.array(z.string()),
-  maxResolution: z.string(),
+  // No maxResolution field: Stability models take an aspect ratio and choose
+  // the output pixels themselves, so a declared ceiling here was both unused
+  // and wrong (a stable-core 16:9 request wrote 2016x1152 on 2026-09-06).
   // Region the model is served from; falls back to the default region.
   region: z.string().optional(),
   // Request body shape: Amazon (taskType/textToImageParams) or Stability

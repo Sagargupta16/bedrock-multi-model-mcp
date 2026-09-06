@@ -59,7 +59,7 @@ npm run lint     # tsc --noEmit
 - Regions split: text defaults to `AWS_REGION` (us-east-1); image (Stability) and video (Luma Ray 2) models live in us-west-2, and the video output S3 bucket must also be in us-west-2.
 - Many foundation models require the `us.` cross-region inference profile prefix for on-demand invocation -- registries store the verified-working form per model. Keep only ACTIVE models (EOL entries like Nova Reel were purged).
 - Generated images land in `BEDROCK_MCP_OUTPUT_DIR`, falling back to cwd then `~/bedrock-images`.
-- CI is `.github/workflows/ci.yml`: `npm ci` + `npm run lint` + `npm test` on push to `main` and on every PR, across a Node matrix (22 and 24). Renovate is enabled via `renovate.json`.
+- CI is `.github/workflows/ci.yml`: `npm ci` + `npm run lint` + `npm test` on push to `main` and on every PR, across a Node matrix (22, 24 and 26). Renovate is enabled via `renovate.json`.
 
 ## Repo-specific rules
 

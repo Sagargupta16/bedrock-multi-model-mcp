@@ -4,6 +4,8 @@ dist/
 *.js.map
 *.d.ts
 *.d.ts.map
+!jest.config.js
+!eslint.config.js
 
 .env
 .env.local
@@ -20,3 +22,6 @@ coverage/
 
 yarn.lock
 pnpm-lock.yaml
+
+# Added for consistency
+.next/

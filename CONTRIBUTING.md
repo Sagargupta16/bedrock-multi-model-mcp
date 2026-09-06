@@ -17,8 +17,8 @@ npm-based - please don't convert the project to another package manager).
 
 ## Checks
 
-Both must pass before you open a pull request. CI runs the same two commands on Node 22
-and Node 24.
+Both must pass before you open a pull request. CI runs the same two commands on Node 22,
+24 and 26.
 
 ```bash
 npm run lint    # tsc --noEmit
@@ -44,9 +44,13 @@ Before a new model ID lands:
    need the `us.` cross-region inference profile prefix for on-demand invocation, and the
    registry stores the verified-working form per model. `The provided model identifier is
    invalid.` means the ID does not resolve.
-2. **Check the parameters.** Current Claude models reject `temperature` with a 400
+2. **Check the parameters.** Anthropic lists `temperature` / `top_p` / `top_k` as
+   deprecated for Claude Opus 4.7 and later, where a non-default value returns a 400
    (`` `temperature` is deprecated for this model. ``). Those entries need
-   `"noTemperature": true`, otherwise the server sends its default and every call fails.
+   `"noTemperature": true`, otherwise the server sends its default 0.7 and every call
+   fails. Earlier models still accept it (Haiku 4.5, Opus 4.6 and Sonnet 4.6 all answer
+   normally with it), so add the flag only for a model that actually returns the 400 -
+   setting it otherwise just drops the caller's `temperature` silently.
 3. **Add an assertion.** Put a matching check in `src/models.test.ts` - at minimum that
    the alias resolves to the ID you intended. Bare-tier aliases (`claude-sonnet`,
    `fable`) track the current model in that tier; version-pinned aliases

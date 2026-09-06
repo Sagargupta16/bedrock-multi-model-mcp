@@ -51,7 +51,8 @@ export interface ImageResult {
 
 // PNG dimensions live in the IHDR chunk: 8-byte signature, 4-byte chunk length,
 // 4-byte "IHDR" type, then width and height as big-endian uint32s.
-function readPngSize(png: Buffer): { width: number; height: number } | undefined {
+// Exported for src/models.test.ts.
+export function readPngSize(png: Buffer): { width: number; height: number } | undefined {
   if (png.length < 24) return undefined;
   if (png.readUInt32BE(0) !== 0x89504e47) return undefined;
   if (png.toString("ascii", 12, 16) !== "IHDR") return undefined;
