@@ -2,6 +2,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { converse } from "./bedrock/converse.js";
 import { generateImage, IMAGE_MODELS, getImageModel } from "./bedrock/image.js";
@@ -9,9 +10,16 @@ import { startVideoGeneration, getVideoStatus, VIDEO_MODELS } from "./bedrock/vi
 import { embed, cosineSimilarity, EMBEDDING_MODELS, getEmbeddingModel } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
 
+// Read the version from package.json (one directory above the compiled
+// dist/index.js) so the version reported to MCP clients cannot drift from the
+// manifest.
+const { version } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+) as { version: string };
+
 const server = new McpServer({
   name: "bedrock-multi-model",
-  version: "0.3.0",
+  version,
 });
 
 // --- Tool: bedrock_ask ---
@@ -169,8 +177,15 @@ server.registerTool(
       ),
       prompt: z.string().describe("Text description of the image to generate"),
       negative_prompt: z.string().optional().describe("What to exclude from the image (e.g. 'blurry, low quality')"),
-      width: z.number().positive().optional().describe("Image width in pixels (default 1024, must be divisible by 16)"),
-      height: z.number().positive().optional().describe("Image height in pixels (default 1024, must be divisible by 16)"),
+      width: z.number().positive().optional().describe(
+        "Desired width (default 1024). Stability models take an aspect ratio, not pixel " +
+        "dimensions: width and height only pick the closest supported ratio (1:1, 16:9, " +
+        "9:16, 3:2, 2:3, 4:5, 5:4, 21:9, 9:21) and the model chooses the output pixels. " +
+        "The reported size is measured from the saved PNG."
+      ),
+      height: z.number().positive().optional().describe(
+        "Desired height (default 1024). See `width` - only the resulting aspect ratio is sent."
+      ),
       seed: z.number().optional().describe("Random seed for reproducible results"),
       output_dir: z.string().optional().describe(
         "Directory to save the image. Absolute or relative to cwd. " +
@@ -194,8 +209,10 @@ server.registerTool(
       const entry = getImageModel(model ?? "stable-ultra");
       const label = entry ? `${entry.name} (${entry.provider})` : result.modelId;
 
+      const size =
+        result.width && result.height ? `Size: ${result.width}x${result.height} | ` : "";
       const text = `**${label}** - Image generated\n` +
-        `Size: ${result.width}x${result.height} | Latency: ${(result.latencyMs / 1000).toFixed(1)}s\n\n` +
+        `${size}Latency: ${(result.latencyMs / 1000).toFixed(1)}s\n\n` +
         `Saved to: \`${result.filePath}\``;
 
       return { content: [{ type: "text" as const, text }] };
@@ -222,8 +239,8 @@ server.registerTool(
       ),
       prompt: z.string().describe("Text description of the video to generate"),
       s3_uri: z.string().describe("S3 URI for output (e.g. 's3://my-bucket/videos/'). Bucket must be in the model's region."),
-      duration_seconds: z.number().optional().describe(
-        "Video duration in seconds: 5 (default) or 9"
+      duration_seconds: z.union([z.literal(5), z.literal(9)]).optional().describe(
+        "Video duration in seconds: 5 (default) or 9. Luma Ray 2 supports no other value."
       ),
     },
     annotations: { openWorldHint: true },
