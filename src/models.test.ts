@@ -7,6 +7,7 @@ import {
   resolveModelId,
   getModelInfo,
 } from "./models.js";
+import { CAPABILITIES } from "./types.js";
 import { IMAGE_MODELS, getImageModel } from "./bedrock/image.js";
 import { VIDEO_MODELS, getVideoModel } from "./bedrock/video.js";
 import { EMBEDDING_MODELS, getEmbeddingModel, cosineSimilarity } from "./bedrock/embed.js";
@@ -34,8 +35,8 @@ test("aliases are unique across all models", () => {
 });
 
 test("resolveModelId maps alias to id, passes through full ids", () => {
-  assert.equal(resolveModelId("claude-sonnet"), "us.anthropic.claude-sonnet-4-6");
-  assert.equal(resolveModelId("CLAUDE-SONNET"), "us.anthropic.claude-sonnet-4-6");
+  assert.equal(resolveModelId("claude-sonnet"), "us.anthropic.claude-sonnet-5");
+  assert.equal(resolveModelId("CLAUDE-SONNET"), "us.anthropic.claude-sonnet-5");
   assert.equal(resolveModelId("some.unknown.model-id"), "some.unknown.model-id");
 });
 
@@ -52,10 +53,36 @@ test("claude-opus alias points at Opus 5, not a pinned older snapshot", () => {
   assert.equal(resolveModelId("claude-opus-4.8"), "us.anthropic.claude-opus-4-8");
 });
 
-test("Opus 5 omits temperature", () => {
+test("bare sonnet and fable aliases track the current models", () => {
+  // Anthropic's current lineup (docs fetched 2026-09-06) is Fable 5.1, Opus 5,
+  // Sonnet 5, Haiku 4.5; Fable 5 and Sonnet 4.6 are legacy-but-available, so
+  // they stay reachable through version-pinned aliases only.
+  assert.equal(resolveModelId("claude-sonnet"), "us.anthropic.claude-sonnet-5");
+  assert.equal(resolveModelId("claude-sonnet-4.6"), "us.anthropic.claude-sonnet-4-6");
+  assert.equal(resolveModelId("fable-5"), "us.anthropic.claude-fable-5");
+});
+
+test("current Claude models omit temperature", () => {
   // Bedrock returns a 400 ("`temperature` is deprecated for this model")
-  // if temperature is sent, so the registry must flag it.
-  assert.equal(getModelInfo("us.anthropic.claude-opus-5")?.noTemperature, true);
+  // if temperature is sent, so the registry must flag it. Verified live on
+  // 2026-09-06 for sonnet-5 and fable-5-1 before they were added here.
+  for (const id of [
+    "us.anthropic.claude-fable-5-1",
+    "us.anthropic.claude-opus-5",
+    "us.anthropic.claude-sonnet-5",
+  ]) {
+    assert.equal(getModelInfo(id)?.noTemperature, true, `${id} must set noTemperature`);
+  }
+});
+
+test("every declared capability is a known token", () => {
+  // Guards the "tool-use" vs "tool_use" drift that reached bedrock_list_models.
+  const known = new Set<string>(CAPABILITIES);
+  for (const m of TEXT_MODELS) {
+    for (const c of m.capabilities) {
+      assert.ok(known.has(c), `${m.id} declares unknown capability "${c}"`);
+    }
+  }
 });
 
 test("image registry loads and aliases resolve", () => {
@@ -93,8 +120,8 @@ test("video registry loads and aliases resolve", () => {
   assert.equal(getVideoModel("ray2")?.id, "luma.ray-v2:0");
 });
 
-test("fable-5 alias resolves to the us inference profile", () => {
-  assert.equal(resolveModelId("fable"), "us.anthropic.claude-fable-5");
+test("fable alias resolves to the us inference profile", () => {
+  assert.equal(resolveModelId("fable"), "us.anthropic.claude-fable-5-1");
 });
 
 test("embedding registry loads and aliases resolve", () => {

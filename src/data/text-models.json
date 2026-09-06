@@ -1,18 +1,38 @@
 [
   {
-    "id": "us.anthropic.claude-fable-5",
-    "name": "Claude Fable 5",
+    "id": "us.anthropic.claude-fable-5-1",
+    "name": "Claude Fable 5.1",
     "provider": "Anthropic",
-    "useCase": "Most capable frontier model, 1M context, adaptive reasoning",
+    "useCase": "Most capable model, for demanding reasoning and long-horizon agentic work",
     "aliases": [
       "fable",
       "claude-fable",
+      "fable-5.1",
+      "claude-fable-5.1"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning"
+    ],
+    "maxTokens": 64000,
+    "noTemperature": true
+  },
+  {
+    "id": "us.anthropic.claude-fable-5",
+    "name": "Claude Fable 5",
+    "provider": "Anthropic",
+    "useCase": "Previous-gen Fable reasoning, 1M context",
+    "aliases": [
       "fable-5"
     ],
     "capabilities": [
       "text",
       "vision",
-      "tool-use",
+      "tool_use",
+      "streaming",
       "reasoning"
     ],
     "maxTokens": 64000,
@@ -22,7 +42,7 @@
     "id": "us.anthropic.claude-opus-5",
     "name": "Claude Opus 5",
     "provider": "Anthropic",
-    "useCase": "Opus-tier flagship reasoning, 1M context, adaptive thinking on by default",
+    "useCase": "Recommended starting point, 1M context, adaptive thinking on by default",
     "aliases": [
       "claude-opus",
       "opus-5",
@@ -89,12 +109,30 @@
     "maxTokens": 32768
   },
   {
+    "id": "us.anthropic.claude-sonnet-5",
+    "name": "Claude Sonnet 5",
+    "provider": "Anthropic",
+    "useCase": "Best combination of speed and intelligence, 1M context",
+    "aliases": [
+      "claude-sonnet",
+      "claude-sonnet-5"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning"
+    ],
+    "maxTokens": 32768,
+    "noTemperature": true
+  },
+  {
     "id": "us.anthropic.claude-sonnet-4-6",
     "name": "Claude Sonnet 4.6",
     "provider": "Anthropic",
-    "useCase": "Balanced",
+    "useCase": "Previous-gen balanced",
     "aliases": [
-      "claude-sonnet",
       "claude-sonnet-4.6"
     ],
     "capabilities": [
