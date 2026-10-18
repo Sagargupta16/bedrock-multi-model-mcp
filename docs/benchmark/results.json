@@ -1,0 +1,1894 @@
+{
+  "date": "2026-10-18",
+  "region": "us-east-1",
+  "runs": 3,
+  "maxTokens": 256,
+  "prompts": [
+    {
+      "id": "explain",
+      "text": "Explain what a message queue is to a junior developer in exactly three sentences."
+    },
+    {
+      "id": "code",
+      "text": "Write a Python function is_palindrome(s) that ignores case and non-alphanumeric characters. Reply with only the code."
+    }
+  ],
+  "models": [
+    "us.anthropic.claude-opus-4-8",
+    "us.anthropic.claude-fable-5",
+    "us.anthropic.claude-opus-5",
+    "us.anthropic.claude-opus-4-7",
+    "us.anthropic.claude-fable-5-1",
+    "us.anthropic.claude-sonnet-5",
+    "us.anthropic.claude-opus-4-6-v1",
+    "us.anthropic.claude-sonnet-4-6",
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "us.meta.llama4-maverick-17b-instruct-v1:0",
+    "us.meta.llama4-scout-17b-instruct-v1:0",
+    "us.meta.llama3-3-70b-instruct-v1:0",
+    "mistral.mistral-large-3-675b-instruct",
+    "mistral.devstral-2-123b",
+    "qwen.qwen3-coder-next",
+    "mistral.mistral-small-2402-v1:0",
+    "us.mistral.pixtral-large-2502-v1:0",
+    "amazon.nova-pro-v1:0",
+    "qwen.qwen3-vl-235b-a22b",
+    "us.deepseek.r1-v1:0",
+    "amazon.nova-lite-v1:0",
+    "us.amazon.nova-2-lite-v1:0",
+    "amazon.nova-micro-v1:0",
+    "deepseek.v3.2",
+    "openai.gpt-oss-20b-1:0",
+    "openai.gpt-oss-120b-1:0"
+  ],
+  "summary": [
+    {
+      "modelId": "us.anthropic.claude-opus-4-8",
+      "name": "Claude Opus 4.8",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2794.5,
+      "medianOutputTokens": 111,
+      "medianTokensPerSec": 39.21728356021333,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5",
+      "name": "Claude Fable 5",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 4176.5,
+      "medianOutputTokens": 134,
+      "medianTokensPerSec": 29.524331090596153,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-5",
+      "name": "Claude Opus 5",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 4460.5,
+      "medianOutputTokens": 153.5,
+      "medianTokensPerSec": 29.99005792124167,
+      "hitCap": 1
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-7",
+      "name": "Claude Opus 4.7",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2403,
+      "medianOutputTokens": 97.5,
+      "medianTokensPerSec": 39.284954449208584,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5-1",
+      "name": "Claude Fable 5.1",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 5610.5,
+      "medianOutputTokens": 126.5,
+      "medianTokensPerSec": 20.51108268502005,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-5",
+      "name": "Claude Sonnet 5",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2690,
+      "medianOutputTokens": 97.5,
+      "medianTokensPerSec": 36.08523144046565,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-6-v1",
+      "name": "Claude Opus 4.6",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 3419,
+      "medianOutputTokens": 80,
+      "medianTokensPerSec": 24.26172790081065,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2095,
+      "medianOutputTokens": 76.5,
+      "medianTokensPerSec": 36.17096804087602,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "name": "Claude Haiku 4.5",
+      "provider": "Anthropic",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2375.5,
+      "medianOutputTokens": 179,
+      "medianTokensPerSec": 71.35298978754807,
+      "hitCap": 3
+    },
+    {
+      "modelId": "us.meta.llama4-maverick-17b-instruct-v1:0",
+      "name": "Llama 4 Maverick 17B",
+      "provider": "Meta",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1355,
+      "medianOutputTokens": 86.5,
+      "medianTokensPerSec": 64.67822238613313,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.meta.llama4-scout-17b-instruct-v1:0",
+      "name": "Llama 4 Scout 17B",
+      "provider": "Meta",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1363,
+      "medianOutputTokens": 98.5,
+      "medianTokensPerSec": 71.13460863460864,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.meta.llama3-3-70b-instruct-v1:0",
+      "name": "Llama 3.3 70B Instruct",
+      "provider": "Meta",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1521,
+      "medianOutputTokens": 107,
+      "medianTokensPerSec": 66.15916311026442,
+      "hitCap": 0
+    },
+    {
+      "modelId": "mistral.mistral-large-3-675b-instruct",
+      "name": "Mistral Large 3 (675B)",
+      "provider": "Mistral",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1245.5,
+      "medianOutputTokens": 60.5,
+      "medianTokensPerSec": 50.07756922837361,
+      "hitCap": 0
+    },
+    {
+      "modelId": "mistral.devstral-2-123b",
+      "name": "Devstral 2 (123B)",
+      "provider": "Mistral",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1878.5,
+      "medianOutputTokens": 63,
+      "medianTokensPerSec": 34.62137215172896,
+      "hitCap": 0
+    },
+    {
+      "modelId": "qwen.qwen3-coder-next",
+      "name": "Qwen3 Coder Next",
+      "provider": "Qwen",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1289.5,
+      "medianOutputTokens": 70.5,
+      "medianTokensPerSec": 36.9933288295896,
+      "hitCap": 0
+    },
+    {
+      "modelId": "mistral.mistral-small-2402-v1:0",
+      "name": "Mistral Small",
+      "provider": "Mistral",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2315,
+      "medianOutputTokens": 98,
+      "medianTokensPerSec": 41.652617631095985,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.mistral.pixtral-large-2502-v1:0",
+      "name": "Pixtral Large",
+      "provider": "Mistral",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2057,
+      "medianOutputTokens": 85,
+      "medianTokensPerSec": 42.17259488563727,
+      "hitCap": 0
+    },
+    {
+      "modelId": "amazon.nova-pro-v1:0",
+      "name": "Nova Pro",
+      "provider": "Amazon",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1491,
+      "medianOutputTokens": 61,
+      "medianTokensPerSec": 43.435776201733646,
+      "hitCap": 0
+    },
+    {
+      "modelId": "qwen.qwen3-vl-235b-a22b",
+      "name": "Qwen3 VL 235B",
+      "provider": "Qwen",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2152,
+      "medianOutputTokens": 57.5,
+      "medianTokensPerSec": 27.6945493566747,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.deepseek.r1-v1:0",
+      "name": "DeepSeek R1",
+      "provider": "DeepSeek",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 2350.5,
+      "medianOutputTokens": 256,
+      "medianTokensPerSec": 108.9593875814894,
+      "hitCap": 6
+    },
+    {
+      "modelId": "amazon.nova-lite-v1:0",
+      "name": "Nova Lite",
+      "provider": "Amazon",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1131.5,
+      "medianOutputTokens": 56,
+      "medianTokensPerSec": 50.420987573014244,
+      "hitCap": 0
+    },
+    {
+      "modelId": "us.amazon.nova-2-lite-v1:0",
+      "name": "Nova 2 Lite",
+      "provider": "Amazon",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1551,
+      "medianOutputTokens": 79.5,
+      "medianTokensPerSec": 53.177314292275426,
+      "hitCap": 0
+    },
+    {
+      "modelId": "amazon.nova-micro-v1:0",
+      "name": "Nova Micro",
+      "provider": "Amazon",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1175,
+      "medianOutputTokens": 59,
+      "medianTokensPerSec": 46.36051774337686,
+      "hitCap": 0
+    },
+    {
+      "modelId": "deepseek.v3.2",
+      "name": "DeepSeek V3.2",
+      "provider": "DeepSeek",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 4603,
+      "medianOutputTokens": 55,
+      "medianTokensPerSec": 13.26909380976891,
+      "hitCap": 0
+    },
+    {
+      "modelId": "openai.gpt-oss-20b-1:0",
+      "name": "GPT-OSS 20B",
+      "provider": "OpenAI",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1502,
+      "medianOutputTokens": 205.5,
+      "medianTokensPerSec": 113.6058997528263,
+      "hitCap": 2
+    },
+    {
+      "modelId": "openai.gpt-oss-120b-1:0",
+      "name": "GPT-OSS 120B",
+      "provider": "OpenAI",
+      "ok": 6,
+      "total": 6,
+      "medianLatencyMs": 1820,
+      "medianOutputTokens": 152,
+      "medianTokensPerSec": 87.9721076301813,
+      "hitCap": 1
+    }
+  ],
+  "calls": [
+    {
+      "modelId": "us.anthropic.claude-opus-4-8",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 3819,
+      "inputTokens": 30,
+      "outputTokens": 162,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-8",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 4092,
+      "inputTokens": 30,
+      "outputTokens": 173,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-8",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 4102,
+      "inputTokens": 30,
+      "outputTokens": 170,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-8",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1770,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-8",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1622,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-8",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1662,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 5610,
+      "inputTokens": 30,
+      "outputTokens": 217,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 5487,
+      "inputTokens": 30,
+      "outputTokens": 215,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 5600,
+      "inputTokens": 30,
+      "outputTokens": 208,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2739,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2866,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2810,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-5",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 5438,
+      "inputTokens": 30,
+      "outputTokens": 247,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-5",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 7869,
+      "inputTokens": 30,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-5",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 5317,
+      "inputTokens": 30,
+      "outputTokens": 252,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-5",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 3604,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-5",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2186,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-5",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2311,
+      "inputTokens": 46,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-7",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 3453,
+      "inputTokens": 35,
+      "outputTokens": 174,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-7",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 3290,
+      "inputTokens": 35,
+      "outputTokens": 154,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-7",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 3058,
+      "inputTokens": 35,
+      "outputTokens": 135,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-7",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1746,
+      "inputTokens": 51,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-7",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1748,
+      "inputTokens": 51,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-7",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1743,
+      "inputTokens": 51,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5-1",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 6982,
+      "inputTokens": 32,
+      "outputTokens": 222,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5-1",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 6657,
+      "inputTokens": 32,
+      "outputTokens": 233,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5-1",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 7664,
+      "inputTokens": 32,
+      "outputTokens": 193,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5-1",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 3788,
+      "inputTokens": 48,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5-1",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 3903,
+      "inputTokens": 48,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-fable-5-1",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 4564,
+      "inputTokens": 48,
+      "outputTokens": 60,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-5",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 4227,
+      "inputTokens": 30,
+      "outputTokens": 206,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-5",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 3181,
+      "inputTokens": 30,
+      "outputTokens": 138,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-5",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 4115,
+      "inputTokens": 30,
+      "outputTokens": 188,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-5",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2171,
+      "inputTokens": 46,
+      "outputTokens": 57,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-5",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1980,
+      "inputTokens": 46,
+      "outputTokens": 57,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-5",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2199,
+      "inputTokens": 46,
+      "outputTokens": 57,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-6-v1",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 4403,
+      "inputTokens": 23,
+      "outputTokens": 110,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-6-v1",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 4326,
+      "inputTokens": 23,
+      "outputTokens": 117,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-6-v1",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 4608,
+      "inputTokens": 23,
+      "outputTokens": 117,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-6-v1",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2124,
+      "inputTokens": 37,
+      "outputTokens": 50,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-6-v1",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2281,
+      "inputTokens": 37,
+      "outputTokens": 50,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-opus-4-6-v1",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2512,
+      "inputTokens": 37,
+      "outputTokens": 50,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-4-6",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 3007,
+      "inputTokens": 23,
+      "outputTokens": 126,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-4-6",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2520,
+      "inputTokens": 23,
+      "outputTokens": 104,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-4-6",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2989,
+      "inputTokens": 23,
+      "outputTokens": 118,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-4-6",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1491,
+      "inputTokens": 37,
+      "outputTokens": 49,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-4-6",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1645,
+      "inputTokens": 37,
+      "outputTokens": 49,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-sonnet-4-6",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1670,
+      "inputTokens": 37,
+      "outputTokens": 49,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2241,
+      "inputTokens": 23,
+      "outputTokens": 102,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2275,
+      "inputTokens": 23,
+      "outputTokens": 102,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2514,
+      "inputTokens": 23,
+      "outputTokens": 102,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2634,
+      "inputTokens": 37,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2440,
+      "inputTokens": 37,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2311,
+      "inputTokens": 37,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.meta.llama4-maverick-17b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1426,
+      "inputTokens": 50,
+      "outputTokens": 83,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-maverick-17b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1879,
+      "inputTokens": 50,
+      "outputTokens": 83,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-maverick-17b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1411,
+      "inputTokens": 50,
+      "outputTokens": 83,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-maverick-17b-instruct-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1096,
+      "inputTokens": 59,
+      "outputTokens": 90,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-maverick-17b-instruct-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1299,
+      "inputTokens": 59,
+      "outputTokens": 93,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-maverick-17b-instruct-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1276,
+      "inputTokens": 59,
+      "outputTokens": 90,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-scout-17b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1407,
+      "inputTokens": 50,
+      "outputTokens": 106,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-scout-17b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1388,
+      "inputTokens": 50,
+      "outputTokens": 104,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-scout-17b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1534,
+      "inputTokens": 50,
+      "outputTokens": 106,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-scout-17b-instruct-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1320,
+      "inputTokens": 59,
+      "outputTokens": 93,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-scout-17b-instruct-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1295,
+      "inputTokens": 59,
+      "outputTokens": 93,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama4-scout-17b-instruct-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1338,
+      "inputTokens": 59,
+      "outputTokens": 93,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama3-3-70b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1627,
+      "inputTokens": 51,
+      "outputTokens": 128,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama3-3-70b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1929,
+      "inputTokens": 51,
+      "outputTokens": 122,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama3-3-70b-instruct-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2087,
+      "inputTokens": 51,
+      "outputTokens": 133,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama3-3-70b-instruct-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1367,
+      "inputTokens": 59,
+      "outputTokens": 92,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama3-3-70b-instruct-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1151,
+      "inputTokens": 59,
+      "outputTokens": 92,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.meta.llama3-3-70b-instruct-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1415,
+      "inputTokens": 59,
+      "outputTokens": 92,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-large-3-675b-instruct",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1359,
+      "inputTokens": 19,
+      "outputTokens": 75,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-large-3-675b-instruct",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1405,
+      "inputTokens": 19,
+      "outputTokens": 75,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-large-3-675b-instruct",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1498,
+      "inputTokens": 19,
+      "outputTokens": 74,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-large-3-675b-instruct",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1113,
+      "inputTokens": 29,
+      "outputTokens": 47,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-large-3-675b-instruct",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1132,
+      "inputTokens": 29,
+      "outputTokens": 47,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-large-3-675b-instruct",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 926,
+      "inputTokens": 29,
+      "outputTokens": 47,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.devstral-2-123b",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2372,
+      "inputTokens": 19,
+      "outputTokens": 91,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.devstral-2-123b",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2062,
+      "inputTokens": 19,
+      "outputTokens": 79,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.devstral-2-123b",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2067,
+      "inputTokens": 19,
+      "outputTokens": 79,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.devstral-2-123b",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1695,
+      "inputTokens": 29,
+      "outputTokens": 47,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.devstral-2-123b",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1675,
+      "inputTokens": 29,
+      "outputTokens": 47,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.devstral-2-123b",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1515,
+      "inputTokens": 29,
+      "outputTokens": 47,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-coder-next",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1623,
+      "inputTokens": 24,
+      "outputTokens": 105,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-coder-next",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 3367,
+      "inputTokens": 24,
+      "outputTokens": 105,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-coder-next",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1582,
+      "inputTokens": 24,
+      "outputTokens": 105,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-coder-next",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 997,
+      "inputTokens": 32,
+      "outputTokens": 36,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-coder-next",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 992,
+      "inputTokens": 32,
+      "outputTokens": 36,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-coder-next",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 955,
+      "inputTokens": 32,
+      "outputTokens": 36,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-small-2402-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2210,
+      "inputTokens": 19,
+      "outputTokens": 83,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-small-2402-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2188,
+      "inputTokens": 19,
+      "outputTokens": 83,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-small-2402-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2046,
+      "inputTokens": 19,
+      "outputTokens": 83,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-small-2402-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2644,
+      "inputTokens": 34,
+      "outputTokens": 113,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-small-2402-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2587,
+      "inputTokens": 34,
+      "outputTokens": 113,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "mistral.mistral-small-2402-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2420,
+      "inputTokens": 34,
+      "outputTokens": 113,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.mistral.pixtral-large-2502-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2093,
+      "inputTokens": 19,
+      "outputTokens": 94,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.mistral.pixtral-large-2502-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2021,
+      "inputTokens": 19,
+      "outputTokens": 90,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.mistral.pixtral-large-2502-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2098,
+      "inputTokens": 19,
+      "outputTokens": 84,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.mistral.pixtral-large-2502-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1941,
+      "inputTokens": 34,
+      "outputTokens": 86,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.mistral.pixtral-large-2502-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1867,
+      "inputTokens": 34,
+      "outputTokens": 59,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.mistral.pixtral-large-2502-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 3096,
+      "inputTokens": 34,
+      "outputTokens": 59,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-pro-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1465,
+      "inputTokens": 15,
+      "outputTokens": 75,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-pro-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2103,
+      "inputTokens": 15,
+      "outputTokens": 71,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-pro-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1517,
+      "inputTokens": 15,
+      "outputTokens": 69,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-pro-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1269,
+      "inputTokens": 28,
+      "outputTokens": 53,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-pro-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1175,
+      "inputTokens": 28,
+      "outputTokens": 53,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-pro-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1779,
+      "inputTokens": 28,
+      "outputTokens": 53,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-vl-235b-a22b",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2414,
+      "inputTokens": 24,
+      "outputTokens": 88,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-vl-235b-a22b",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2590,
+      "inputTokens": 24,
+      "outputTokens": 87,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-vl-235b-a22b",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1890,
+      "inputTokens": 24,
+      "outputTokens": 83,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-vl-235b-a22b",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 5153,
+      "inputTokens": 32,
+      "outputTokens": 32,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-vl-235b-a22b",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1480,
+      "inputTokens": 32,
+      "outputTokens": 32,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "qwen.qwen3-vl-235b-a22b",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1468,
+      "inputTokens": 32,
+      "outputTokens": 32,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.deepseek.r1-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2255,
+      "inputTokens": 20,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.deepseek.r1-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2264,
+      "inputTokens": 20,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.deepseek.r1-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2440,
+      "inputTokens": 20,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.deepseek.r1-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2302,
+      "inputTokens": 31,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.deepseek.r1-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2544,
+      "inputTokens": 31,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "us.deepseek.r1-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2399,
+      "inputTokens": 31,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "amazon.nova-lite-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1108,
+      "inputTokens": 15,
+      "outputTokens": 59,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-lite-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1122,
+      "inputTokens": 15,
+      "outputTokens": 59,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-lite-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1141,
+      "inputTokens": 15,
+      "outputTokens": 59,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-lite-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1202,
+      "inputTokens": 28,
+      "outputTokens": 51,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-lite-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1038,
+      "inputTokens": 28,
+      "outputTokens": 51,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-lite-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1209,
+      "inputTokens": 28,
+      "outputTokens": 53,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.amazon.nova-2-lite-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1785,
+      "inputTokens": 61,
+      "outputTokens": 89,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.amazon.nova-2-lite-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1653,
+      "inputTokens": 61,
+      "outputTokens": 89,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.amazon.nova-2-lite-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1552,
+      "inputTokens": 61,
+      "outputTokens": 89,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.amazon.nova-2-lite-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1333,
+      "inputTokens": 70,
+      "outputTokens": 70,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.amazon.nova-2-lite-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1550,
+      "inputTokens": 70,
+      "outputTokens": 70,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "us.amazon.nova-2-lite-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1229,
+      "inputTokens": 70,
+      "outputTokens": 70,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-micro-v1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1123,
+      "inputTokens": 15,
+      "outputTokens": 72,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-micro-v1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1395,
+      "inputTokens": 15,
+      "outputTokens": 72,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-micro-v1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1296,
+      "inputTokens": 15,
+      "outputTokens": 74,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-micro-v1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1119,
+      "inputTokens": 28,
+      "outputTokens": 46,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-micro-v1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1213,
+      "inputTokens": 28,
+      "outputTokens": 46,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "amazon.nova-micro-v1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1137,
+      "inputTokens": 28,
+      "outputTokens": 46,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "deepseek.v3.2",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 7226,
+      "inputTokens": 19,
+      "outputTokens": 80,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "deepseek.v3.2",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 5392,
+      "inputTokens": 19,
+      "outputTokens": 73,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "deepseek.v3.2",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 5154,
+      "inputTokens": 19,
+      "outputTokens": 67,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "deepseek.v3.2",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 2259,
+      "inputTokens": 30,
+      "outputTokens": 43,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "deepseek.v3.2",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 4052,
+      "inputTokens": 30,
+      "outputTokens": 43,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "deepseek.v3.2",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 2012,
+      "inputTokens": 30,
+      "outputTokens": 38,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-20b-1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1394,
+      "inputTokens": 82,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "openai.gpt-oss-20b-1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1610,
+      "inputTokens": 82,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "openai.gpt-oss-20b-1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 3819,
+      "inputTokens": 82,
+      "outputTokens": 255,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-20b-1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 925,
+      "inputTokens": 91,
+      "outputTokens": 102,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-20b-1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1789,
+      "inputTokens": 91,
+      "outputTokens": 103,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-20b-1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1334,
+      "inputTokens": 91,
+      "outputTokens": 156,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-120b-1:0",
+      "prompt": "explain",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1910,
+      "inputTokens": 82,
+      "outputTokens": 148,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-120b-1:0",
+      "prompt": "explain",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 2293,
+      "inputTokens": 82,
+      "outputTokens": 199,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-120b-1:0",
+      "prompt": "explain",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 1730,
+      "inputTokens": 82,
+      "outputTokens": 256,
+      "stopReason": "max_tokens"
+    },
+    {
+      "modelId": "openai.gpt-oss-120b-1:0",
+      "prompt": "code",
+      "run": 1,
+      "ok": true,
+      "latencyMs": 1402,
+      "inputTokens": 91,
+      "outputTokens": 125,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-120b-1:0",
+      "prompt": "code",
+      "run": 2,
+      "ok": true,
+      "latencyMs": 1294,
+      "inputTokens": 91,
+      "outputTokens": 147,
+      "stopReason": "end_turn"
+    },
+    {
+      "modelId": "openai.gpt-oss-120b-1:0",
+      "prompt": "code",
+      "run": 3,
+      "ok": true,
+      "latencyMs": 3013,
+      "inputTokens": 91,
+      "outputTokens": 156,
+      "stopReason": "end_turn"
+    }
+  ]
+}
