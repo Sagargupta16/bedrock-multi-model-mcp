@@ -6,7 +6,16 @@
 [![Last commit](https://img.shields.io/github/last-commit/Sagargupta16/bedrock-multi-model-mcp?style=flat-square)](https://github.com/Sagargupta16/bedrock-multi-model-mcp/commits/main)
 [![CI](https://img.shields.io/github/actions/workflow/status/Sagargupta16/bedrock-multi-model-mcp/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Sagargupta16/bedrock-multi-model-mcp/actions/workflows/ci.yml)
 
-MCP server for AWS Bedrock - text, image, and video generation from any model. Use Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS, and more from Claude Code (or any MCP client).
+MCP server for AWS Bedrock - text, image, video and embeddings from any model. Use Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS, and more from Claude Code (or any MCP client).
+
+**Why:** Bedrock already gives one AWS account access to models from seven text providers,
+but each one is a different model ID, inference profile, region and request shape. This
+server puts them behind seven MCP tools and one set of AWS credentials, so an agent can
+ask a second model for a review, run the same prompt across five models side by side, or
+generate an image, without leaving the chat or writing SDK code.
+
+At a glance: 26 text models from 7 providers, 3 image models, 1 video model and 5
+embedding models, all defined as data in [src/data/](src/data/) and validated at startup.
 
 ## Tools
 
@@ -116,7 +125,16 @@ npm run build
 
 ### Configure in Claude Code
 
-Add to your Claude Code MCP settings (`~/.claude.json`):
+One command, from the clone directory:
+
+```bash
+claude mcp add --transport stdio --scope user bedrock \
+  --env AWS_REGION=us-east-1 \
+  --env AWS_BEARER_TOKEN_BEDROCK=ABSK... \
+  -- node "$(pwd)/dist/index.js"
+```
+
+Or add it by hand to your Claude Code MCP settings (`~/.claude.json`):
 
 ```json
 {
@@ -219,6 +237,37 @@ and, for the Claude models, [Anthropic pricing](https://platform.claude.com/docs
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    client["MCP client<br/>(Claude Code, Claude Desktop, ...)"]
+    subgraph server["bedrock-multi-model-mcp (stdio)"]
+        tools["index.ts<br/>7 tools, Zod input schemas"]
+        registry["src/data/*.json<br/>model registries, Zod-validated"]
+        wrappers["converse / image / video / embed"]
+        auth["client.ts<br/>SDK client per region<br/>+ bearer-token HTTP fallback"]
+    end
+    subgraph aws["AWS Bedrock Runtime"]
+        east["AWS_REGION (default us-east-1)<br/>Converse, embeddings"]
+        west["us-west-2<br/>Stability images, Luma Ray 2"]
+    end
+    s3[("S3 bucket<br/>video output")]
+    disk[("local PNG files")]
+
+    client -- "JSON-RPC over stdio" --> tools
+    tools --> registry
+    tools --> wrappers
+    wrappers --> auth
+    auth --> east
+    auth --> west
+    west -- "StartAsyncInvoke" --> s3
+    wrappers -- "decoded image" --> disk
+```
+
+A tool call resolves its model alias against the registry, picks the request shape and
+region from that entry, and sends it through a cached SDK client for that region. If the
+SDK call fails and `AWS_BEARER_TOKEN_BEDROCK` is set, the same request is retried as raw
+HTTPS with an `Authorization: Bearer` header.
+
 ```
 src/
   index.ts          # MCP server - tool registration, stdio transport
@@ -242,6 +291,18 @@ Model definitions are data, kept in `src/data/*.json` and validated against Zod 
 - **Text**: Uses the [Converse API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html) - unified interface across all text models
 - **Image**: Uses [InvokeModel](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html) with model-specific request formats (handled internally)
 - **Video**: Uses [StartAsyncInvoke](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_StartAsyncInvoke.html) - requires S3 bucket for output
+
+### Design decisions
+
+| Decision | Why |
+|----------|-----|
+| Converse API for every text model | One request and response shape across all seven providers, so adding a text model is a JSON entry, not a new code path. |
+| Model catalog as JSON + Zod | A malformed or half-edited registry fails at startup, not on the first call. Capabilities are a closed enum, so a typo like `tool-use` is rejected at load. |
+| Per-model `noTemperature` flag | Claude Opus 4.7 and later return a 400 for a non-default `temperature`; the flag drops the parameter for exactly those entries. |
+| Cached SDK client per region | Text and embeddings run in `AWS_REGION`, while the Stability and Luma models are only served from us-west-2. |
+| `Promise.allSettled` in `bedrock_compare` | One model without access, or one throttled call, reports its own error while the rest still answer. |
+| Image size read from the saved PNG | Stability models take an aspect ratio and choose the pixels, so echoing the requested size back would be wrong. |
+| Region from the job ARN is validated | The bearer-token fallback puts the region into the request host, so an unchecked value could send the token to another server. |
 
 ## Troubleshooting
 
