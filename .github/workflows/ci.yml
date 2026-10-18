@@ -28,6 +28,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-      - run: npm ci
+      # No dependency needs an install script, so skip them: a compromised
+      # transitive package cannot run code on the runner at install time.
+      - run: npm ci --ignore-scripts
       - run: npm run lint
       - run: npm test
