@@ -101,8 +101,12 @@ export function parseVerdict(text: string, labels: string[]): Verdict | undefine
   if (!parsed.success) return undefined;
   const winner = parsed.data.winner.trim().toUpperCase();
   if (!labels.includes(winner)) return undefined;
+  // Judges sometimes echo labels in lower case ("a": 9); match the winner's casing.
+  const scores = Object.fromEntries(
+    Object.entries(parsed.data.scores).map(([label, score]) => [label.trim().toUpperCase(), score]),
+  );
   return {
-    scores: parsed.data.scores,
+    scores,
     winner,
     reasoning: parsed.data.reasoning,
     finalAnswer: parsed.data.final_answer,
@@ -212,9 +216,14 @@ export function formatJudgeReport(report: JudgeReport): string {
   } else if (verdict) {
     const winner = byLabel.get(verdict.winner)!;
     out.push(`## Winner: ${winner.name}`, `*Judged blind by ${judgeName}*`, "");
+    // Ties on score put the judge's winner first, so Rank 1 always matches the header.
+    const isWinner = (c: Candidate) => (c.label === verdict.winner ? 1 : 0);
     const ranked = candidates
       .filter((c) => c.result)
-      .sort((a, b) => (verdict.scores[b.label] ?? 0) - (verdict.scores[a.label] ?? 0));
+      .sort(
+        (a, b) =>
+          (verdict.scores[b.label] ?? 0) - (verdict.scores[a.label] ?? 0) || isWinner(b) - isWinner(a),
+      );
     out.push("| Rank | Model | Score | Tokens out | Latency |", "| --- | --- | --- | --- | --- |");
     ranked.forEach((c, i) => {
       const score = verdict.scores[c.label];

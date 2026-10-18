@@ -47,6 +47,12 @@ test("parseVerdict reads JSON wrapped in prose or a code fence", () => {
   assert.equal(v.scores.B, 4);
 });
 
+test("parseVerdict upper-cases score keys to match the labels", () => {
+  const v = parseVerdict('{"scores":{"a":9," b ":4},"winner":"a","reasoning":"x"}', ["A", "B"]);
+  assert.ok(v);
+  assert.deepEqual(v.scores, { A: 9, B: 4 });
+});
+
 test("parseVerdict rejects malformed JSON and unknown winners", () => {
   assert.equal(parseVerdict("no json here", ["A", "B"]), undefined);
   assert.equal(parseVerdict('{"scores":{"A":9}', ["A"]), undefined);
@@ -75,6 +81,20 @@ test("runJudge sends anonymous answers to the judge and maps the winner back", a
   assert.match(text, /## Winner: Nova Pro \(Amazon\)/);
   assert.match(text, /\| 1 \| Nova Pro \(Amazon\) \| 8\/10 \|/);
   assert.match(text, /### Answer A: Llama 4 Maverick/);
+});
+
+test("a tied top score ranks the judge's winner first", async () => {
+  // A and B tie at 9/10 and the judge picks B, which comes second in label order.
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> =>
+    o.modelId.includes("opus")
+      ? fakeResult(o.modelId, '{"scores":{"A":9,"B":9},"winner":"B","reasoning":"B is tighter."}')
+      : fakeResult(o.modelId, "same answer");
+  const text = formatJudgeReport(
+    await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+  );
+  assert.match(text, /## Winner: Nova Pro \(Amazon\)/);
+  assert.match(text, /\| 1 \| Nova Pro \(Amazon\) \| 9\/10 \|/);
+  assert.match(text, /\| 2 \| Llama 4 Maverick 17B \(Meta\) \| 9\/10 \|/);
 });
 
 test("runJudge reports failed candidates and skips the judge when one answer is left", async () => {
