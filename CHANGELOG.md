@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2026-10-18
+
+### Security
+
+- Dependency refresh for 5 `npm audit` findings (1 critical, 2 high, 2 moderate): `proxy-addr` 2.0.7 -> 2.0.8 (GHSA-jqcg-44mw-7w3h, the open Dependabot alert), `@modelcontextprotocol/sdk` 1.30.0 -> 1.32.1 (GHSA-6qxp-vccf-f47h, fixed in 1.31.0), `brace-expansion` -> 5.0.12, `fast-uri` -> 3.1.8, `ip-address` -> 10.7.4. Manifest floors raised so a fresh install cannot resolve the vulnerable ranges: `@aws-sdk/client-bedrock-runtime` ^3.1152.0, `@modelcontextprotocol/sdk` ^1.32.1, `zod` ^4.6.7, `@types/node` ^22.20.5. `npm audit` reports 0 vulnerabilities.
+- CI installs with `npm ci --ignore-scripts` (SonarCloud githubactions:S6505, the open code-scanning alert). No dependency needs an install script.
+
+### Changed
+
+- `typescript` 6.0.3 -> 7.0.2 (the native compiler). `tsc --noEmit` and the build pass unchanged on the existing `tsconfig.json`.
+- README: a "Why" paragraph and registry counts up top, a Mermaid architecture diagram with the request path, a design-decisions table, and a one-command `claude mcp add` setup. The intro now lists embeddings alongside text, image and video.
+
+### Fixed
+
+- `npm test` passed `dist/**/*.test.js` unquoted, so on Linux `sh` (no globstar) it only ran by accident: with no test file one level down the shell passed the pattern through and Node expanded it. The first test added under `src/bedrock/` would have made `sh` expand it to that file alone and silently skip `dist/models.test.js`. The pattern is now quoted, so Node's own glob always sees it.
+
 ## [0.4.0] - 2026-09-06
 
 ### Added
