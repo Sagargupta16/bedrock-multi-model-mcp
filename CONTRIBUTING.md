@@ -69,8 +69,8 @@ cannot drift apart.
 - Keep a pull request to one work stream, and say in the body what you verified and how.
   For anything that talks to Bedrock, "the types compile" is not verification - name the
   call you made and what came back.
-- Note user-facing changes in `CHANGELOG.md` under an `## [Unreleased]` heading or the
-  version you are cutting.
+- Note user-facing changes in `CHANGELOG.md` under the concrete next version (for example
+  `## [0.4.2] - YYYY-MM-DD`), never an `Unreleased` heading, and bump `package.json` to match.
 
 ## Reporting a security issue
 

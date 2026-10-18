@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 
 - `typescript` 6.0.3 -> 7.0.2 (the native compiler). `tsc --noEmit` and the build pass unchanged on the existing `tsconfig.json`.
 - README: a "Why" paragraph and registry counts up top, a Mermaid architecture diagram with the request path, a design-decisions table, and a one-command `claude mcp add` setup. The intro now lists embeddings alongside text, image and video.
+- CONTRIBUTING: changelog entries go under the concrete next version with a matching `package.json` bump, not an `Unreleased` heading.
 
 ### Fixed
 
