@@ -1,7 +1,8 @@
 # Contributing
 
 Thanks for taking a look. This is a small, focused MCP server, so most contributions are
-either a model-registry update or a fix to one of the four API wrappers.
+either a model-registry update or a fix to one of the four API wrappers (or `src/judge.ts`,
+which builds `bedrock_judge` on top of the text wrapper).
 
 ## Getting set up
 
@@ -70,7 +71,29 @@ cannot drift apart.
   For anything that talks to Bedrock, "the types compile" is not verification - name the
   call you made and what came back.
 - Note user-facing changes in `CHANGELOG.md` under the concrete next version (for example
-  `## [0.4.2] - YYYY-MM-DD`), never an `Unreleased` heading, and bump `package.json` to match.
+  `## [0.5.1] - YYYY-MM-DD`), never an `Unreleased` heading, and bump `package.json` and
+  both `version` fields in `server.json` to match (a test fails on any skew).
+
+## Releasing
+
+Pushing a `v*` tag runs [`.github/workflows/release.yml`](.github/workflows/release.yml):
+it checks that the tag, `package.json` and `server.json` agree, runs lint and tests,
+publishes to npm, then publishes `server.json` to the official MCP Registry. Neither step
+uses a stored token: npm uses trusted publishing (GitHub OIDC, provenance attached) and
+`mcp-publisher login github-oidc` uses the same OIDC token, which proves ownership of the
+`io.github.Sagargupta16/*` namespace.
+
+One-time setup, done by the maintainer:
+
+1. On npmjs.com, package settings > Trusted publishing > GitHub Actions: repository
+   `Sagargupta16/bedrock-multi-model-mcp`, workflow `release.yml`, environment `release`.
+2. If npm will not attach a trusted publisher to a name that has never been published,
+   publish the first version by hand instead (`npm login`, `npm publish --access public`,
+   then `mcp-publisher login github` and `mcp-publisher publish`), add the trusted
+   publisher, and let tags drive every release after that.
+3. Tag and push: `git tag v0.5.0`, then `git push origin v0.5.0`.
+
+Validate `server.json` locally with `mcp-publisher validate server.json` before tagging.
 
 ## Reporting a security issue
 

@@ -10,12 +10,26 @@ MCP server for AWS Bedrock - text, image, video and embeddings from any model. U
 
 **Why:** Bedrock already gives one AWS account access to models from seven text providers,
 but each one is a different model ID, inference profile, region and request shape. This
-server puts them behind seven MCP tools and one set of AWS credentials, so an agent can
-ask a second model for a review, run the same prompt across five models side by side, or
-generate an image, without leaving the chat or writing SDK code.
+server puts them behind eight MCP tools and one set of AWS credentials, so an agent can
+ask a second model for a review, run the same prompt across five models side by side, have
+a judge model score those answers blind, or generate an image, without leaving the chat or
+writing SDK code.
 
 At a glance: 26 text models from 7 providers, 3 image models, 1 video model and 5
 embedding models, all defined as data in [src/data/](src/data/) and validated at startup.
+All 26 text models answered every call of the [benchmark](#benchmark) on 2026-10-18.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/demo/judge-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/demo/judge-light.svg">
+  <img alt="Terminal recording of bedrock_judge: Llama 4 Maverick, Nova Pro and DeepSeek V3.2 answer when to pick SQS over SNS, and Claude Opus 5 judges them blind. Llama 4 Maverick wins 9/10, DeepSeek V3.2 scores 8/10, Nova Pro 7/10." src="docs/demo/judge-dark.svg" width="800">
+</picture>
+
+A real `bedrock_judge` run from 2026-10-18, called through
+[`scripts/call-tool.mjs`](scripts/call-tool.mjs) with the arguments in
+[docs/demo/judge-args.json](docs/demo/judge-args.json). The output lines are excerpted from
+that run with the table columns aligned; the full reply also carries the judge's reasoning
+and all three answers.
 
 ## Tools
 
@@ -23,6 +37,7 @@ embedding models, all defined as data in [src/data/](src/data/) and validated at
 |------|-------------|
 | `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. |
 | `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. |
+| `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. |
 | `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
 | `bedrock_generate_image` | Generate images from text (Stable Image Ultra, SD3.5 Large, Stable Image Core). Saves PNG locally. |
 | `bedrock_generate_video` | Start async video generation (Luma Ray 2). Output to S3. |
@@ -194,7 +209,7 @@ cwd" behavior cannot apply and generated images fall back to `~/bedrock-images/`
 
 The server supports two auth methods:
 
-1. **Bedrock API Key (bearer token)** - Set `AWS_BEARER_TOKEN_BEDROCK`. The SDK (v3.840.0+) reads this automatically. If the SDK fails, falls back to raw HTTP with `Authorization: Bearer` header.
+1. **Bedrock API Key (bearer token)** - Set `AWS_BEARER_TOKEN_BEDROCK`. The SDK (v3.840.0+) reads this automatically. If the SDK is rejected on auth, the request is retried once as raw HTTP with an `Authorization: Bearer` header; other errors are returned as they are.
 2. **IAM credentials** - Standard AWS credential chain (env vars, profile, SSO, IAM role).
 
 ## Usage Examples
@@ -216,6 +231,21 @@ billed independently - three models is three generations, five is five. This ser
 adds no markup and sets no rates; billing is entirely AWS Bedrock's, per model and
 per token. Current rates: [AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/)
 and, for the Claude models, [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing).
+
+### Let a judge pick the best answer
+
+```
+"Use bedrock_judge with llama4, nova-pro and deepseek: In two sentences, when should a team pick SQS over SNS?"
+```
+
+The candidates answer in parallel. The judge (default `claude-opus`, override with
+`judge`) then sees the answers shuffled and labeled A, B, C with the model names
+removed, scores each from 1 to 10, and names a winner. The tool maps the labels back
+to models and returns a ranked table, the judge's reasoning, and every answer. Pass
+`criteria` to change what is scored and `synthesize: true` to also get one merged
+answer. A candidate that fails is listed under **Failed** and the rest are still
+judged; if the judge call fails, the answers still come back. Billing is one
+generation per candidate plus one for the judge.
 
 ### Generate an image
 
@@ -241,7 +271,7 @@ and, for the Claude models, [Anthropic pricing](https://platform.claude.com/docs
 flowchart LR
     client["MCP client<br/>(Claude Code, Claude Desktop, ...)"]
     subgraph server["bedrock-multi-model-mcp (stdio)"]
-        tools["index.ts<br/>7 tools, Zod input schemas"]
+        tools["index.ts<br/>8 tools, Zod input schemas"]
         registry["src/data/*.json<br/>model registries, Zod-validated"]
         wrappers["converse / image / video / embed"]
         auth["client.ts<br/>SDK client per region<br/>+ bearer-token HTTP fallback"]
@@ -265,12 +295,15 @@ flowchart LR
 
 A tool call resolves its model alias against the registry, picks the request shape and
 region from that entry, and sends it through a cached SDK client for that region. If the
-SDK call fails and `AWS_BEARER_TOKEN_BEDROCK` is set, the same request is retried as raw
-HTTPS with an `Authorization: Bearer` header.
+SDK call is rejected on auth (no credentials resolved, a bad or expired signature or token,
+`AccessDeniedException`) and `AWS_BEARER_TOKEN_BEDROCK` is set, the same request is retried
+once as raw HTTPS with an `Authorization: Bearer` header. Throttling, timeouts and 5xx
+errors are never retried, because the first request may already have run and been billed.
 
 ```
 src/
   index.ts          # MCP server - tool registration, stdio transport
+  judge.ts          # bedrock_judge - blind labels, judge prompt, verdict parsing
   models.ts         # Loads + validates text-model data, resolves aliases
   types.ts          # Zod schemas for model data validation
   bedrock/
@@ -284,6 +317,9 @@ src/
     image-models.json      # Image model registry
     video-models.json      # Video model registry
     embedding-models.json  # Embedding model registry
+scripts/
+  call-tool.mjs     # Minimal stdio MCP client: list tools or call one
+  benchmark.mjs     # Latency benchmark across every text model
 ```
 
 Model definitions are data, kept in `src/data/*.json` and validated against Zod schemas at load time, so the catalog can be updated without changing logic. The build copies these JSON files into `dist/data/`.
@@ -301,8 +337,64 @@ Model definitions are data, kept in `src/data/*.json` and validated against Zod 
 | Per-model `noTemperature` flag | Claude Opus 4.7 and later return a 400 for a non-default `temperature`; the flag drops the parameter for exactly those entries. |
 | Cached SDK client per region | Text and embeddings run in `AWS_REGION`, while the Stability and Luma models are only served from us-west-2. |
 | `Promise.allSettled` in `bedrock_compare` | One model without access, or one throttled call, reports its own error while the rest still answer. |
+| Blind, shuffled answers in `bedrock_judge` | LLM judges favor answers by position and by name. The judge sees only labels in a random order, and the tool maps them back to models afterwards. |
+| Bearer fallback on auth errors only | A retried `StartAsyncInvoke` after a timeout could start a second billed video job, so only rejections that happen before Bedrock does any work are retried. |
 | Image size read from the saved PNG | Stability models take an aspect ratio and choose the pixels, so echoing the requested size back would be wrong. |
 | Region from the job ARN is validated | The bearer-token fallback puts the region into the request host, so an unchecked value could send the token to another server. |
+
+## Benchmark
+
+Every text model in the registry, same prompts, same machine, one run of
+[`scripts/benchmark.mjs`](scripts/benchmark.mjs). The latency includes the network round
+trip from that machine to the region, so read it as a ranking within this run rather
+than a figure for your own setup. Raw per-call data is in
+[docs/benchmark/results.json](docs/benchmark/results.json); rerun it on your own account
+with `npm run benchmark` (every call is billed at the model's normal rate), or re-render
+the table from saved data with `node scripts/benchmark.mjs --from docs/benchmark/results.json`.
+
+<!-- benchmark:start -->
+Measured 2026-10-18 in us-east-1 by `scripts/benchmark.mjs`: 2 prompts x 3 runs per model, temperature 0 where accepted, 256-token output cap. 26 of 26 models answered, 156 of 156 calls succeeded. Latency is the median client wall-clock time for the whole call, sorted fastest first. "Hit cap" counts answers cut off at 256 tokens, which also caps their token counts.
+
+| Model | Provider | Median latency (s) | Median output tokens | Median output tokens/s | Hit cap | OK |
+| --- | --- | --- | --- | --- | --- | --- |
+| Nova Lite | Amazon | 1.13 | 56 | 50 | 0 | 6/6 |
+| Nova Micro | Amazon | 1.18 | 59 | 46 | 0 | 6/6 |
+| Mistral Large 3 (675B) | Mistral | 1.25 | 61 | 50 | 0 | 6/6 |
+| Qwen3 Coder Next | Qwen | 1.29 | 71 | 37 | 0 | 6/6 |
+| Llama 4 Maverick 17B | Meta | 1.35 | 87 | 65 | 0 | 6/6 |
+| Llama 4 Scout 17B | Meta | 1.36 | 99 | 71 | 0 | 6/6 |
+| Nova Pro | Amazon | 1.49 | 61 | 43 | 0 | 6/6 |
+| GPT-OSS 20B | OpenAI | 1.50 | 206 | 114 | 2 | 6/6 |
+| Llama 3.3 70B Instruct | Meta | 1.52 | 107 | 66 | 0 | 6/6 |
+| Nova 2 Lite | Amazon | 1.55 | 80 | 53 | 0 | 6/6 |
+| GPT-OSS 120B | OpenAI | 1.82 | 152 | 88 | 1 | 6/6 |
+| Devstral 2 (123B) | Mistral | 1.88 | 63 | 35 | 0 | 6/6 |
+| Pixtral Large | Mistral | 2.06 | 85 | 42 | 0 | 6/6 |
+| Claude Sonnet 4.6 | Anthropic | 2.10 | 77 | 36 | 0 | 6/6 |
+| Qwen3 VL 235B | Qwen | 2.15 | 58 | 28 | 0 | 6/6 |
+| Mistral Small | Mistral | 2.31 | 98 | 42 | 0 | 6/6 |
+| DeepSeek R1 | DeepSeek | 2.35 | 256 | 109 | 6 | 6/6 |
+| Claude Haiku 4.5 | Anthropic | 2.38 | 179 | 71 | 3 | 6/6 |
+| Claude Opus 4.7 | Anthropic | 2.40 | 98 | 39 | 0 | 6/6 |
+| Claude Sonnet 5 | Anthropic | 2.69 | 98 | 36 | 0 | 6/6 |
+| Claude Opus 4.8 | Anthropic | 2.79 | 111 | 39 | 0 | 6/6 |
+| Claude Opus 4.6 | Anthropic | 3.42 | 80 | 24 | 0 | 6/6 |
+| Claude Fable 5 | Anthropic | 4.18 | 134 | 30 | 0 | 6/6 |
+| Claude Opus 5 | Anthropic | 4.46 | 154 | 30 | 1 | 6/6 |
+| DeepSeek V3.2 | DeepSeek | 4.60 | 55 | 13 | 0 | 6/6 |
+| Claude Fable 5.1 | Anthropic | 5.61 | 127 | 21 | 0 | 6/6 |
+<!-- benchmark:end -->
+
+## Try a tool without an MCP client
+
+[`scripts/call-tool.mjs`](scripts/call-tool.mjs) spawns the built server over stdio, the
+same way Claude Code does, and calls one tool with AWS credentials from your shell:
+
+```bash
+npm run build
+node scripts/call-tool.mjs                       # list the tools
+node scripts/call-tool.mjs bedrock_ask '{"model":"nova-micro","prompt":"Say hi"}'
+```
 
 ## Troubleshooting
 

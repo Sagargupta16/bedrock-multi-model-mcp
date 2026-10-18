@@ -1,0 +1,5 @@
+{
+  "models": ["llama4", "nova-pro", "deepseek"],
+  "prompt": "In two sentences: when should a team pick SQS over SNS?",
+  "max_tokens": 200
+}
