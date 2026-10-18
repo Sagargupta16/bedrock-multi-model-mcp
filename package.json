@@ -1,6 +1,6 @@
 {
   "name": "bedrock-multi-model-mcp",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "MCP server for AWS Bedrock - text, image, video, and embeddings across Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS and more",
   "type": "module",
   "main": "dist/index.js",
@@ -18,7 +18,7 @@
     "start": "node dist/index.js",
     "clean": "rimraf dist",
     "lint": "tsc --noEmit",
-    "test": "npm run build && node --test dist/**/*.test.js",
+    "test": "npm run build && node --test \"dist/**/*.test.js\"",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [
@@ -45,13 +45,13 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1030.0",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^4.3.6"
+    "@aws-sdk/client-bedrock-runtime": "^3.1152.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
+    "@types/node": "^22.20.5",
     "rimraf": "^6.0.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
