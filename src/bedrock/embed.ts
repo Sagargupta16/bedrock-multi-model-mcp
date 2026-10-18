@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { z } from "zod";
 import { EmbeddingModelSchema, type EmbeddingModel } from "../types.js";
-import { bearerToken, bedrockFetch, getClient } from "./client.js";
+import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
 
 // Embedding model catalog loaded and validated from src/data/embedding-models.json.
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
@@ -23,22 +23,23 @@ export function getEmbeddingModel(alias: string): EmbeddingModel | undefined {
 
 async function invoke(modelId: string, body: Record<string, unknown>): Promise<unknown> {
   const json = JSON.stringify(body);
-  try {
-    const command = new InvokeModelCommand({
-      modelId,
-      body: new TextEncoder().encode(json),
-      contentType: "application/json",
-      accept: "application/json",
-    });
-    const response = await getClient().send(command);
-    return JSON.parse(new TextDecoder().decode(response.body));
-  } catch (sdkErr) {
-    if (!bearerToken) throw sdkErr;
-    return bedrockFetch(`model/${encodeURIComponent(modelId)}/invoke`, {
-      method: "POST",
-      body: json,
-    });
-  }
+  return withBearerFallback(
+    async () => {
+      const command = new InvokeModelCommand({
+        modelId,
+        body: new TextEncoder().encode(json),
+        contentType: "application/json",
+        accept: "application/json",
+      });
+      const response = await getClient().send(command);
+      return JSON.parse(new TextDecoder().decode(response.body)) as unknown;
+    },
+    () =>
+      bedrockFetch(`model/${encodeURIComponent(modelId)}/invoke`, {
+        method: "POST",
+        body: json,
+      }),
+  );
 }
 
 // Amazon Titan embeds one text per call: { inputText } -> { embedding: number[] }.

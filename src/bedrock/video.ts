@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { z } from "zod";
 import { VideoModelSchema, type VideoModel } from "../types.js";
-import { bearerToken, bedrockFetch, getClient } from "./client.js";
+import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
 
 // Video model catalog loaded and validated from src/data/video-models.json.
 // All video models are invoked asynchronously via StartAsyncInvoke with S3
@@ -79,49 +79,47 @@ export async function startVideoGeneration(options: VideoOptions): Promise<Video
   const modelInput = buildLumaRayInput(options, duration);
   const effectiveDuration = duration >= 9 ? 9 : 5;
 
-  try {
-    const command = new StartAsyncInvokeCommand({
-      modelId: model.id,
-      modelInput: modelInput as unknown as DocumentType,
-      outputDataConfig: {
-        s3OutputDataConfig: { s3Uri: options.s3Uri },
-      },
-    });
-    const response = await getClient(model.region).send(command);
-    return {
-      modelId: model.id,
-      modelName: model.name,
-      invocationArn: response.invocationArn ?? "",
-      s3Uri: options.s3Uri,
-      durationSeconds: effectiveDuration,
-      region: model.region,
-    };
-  } catch (sdkErr) {
-    if (!bearerToken) throw sdkErr;
+  // Falls back to raw HTTP only on an auth rejection: a timeout or 5xx here
+  // may mean the job already started, and a retry would bill a second video.
+  const invocationArn = await withBearerFallback(
+    async () => {
+      const command = new StartAsyncInvokeCommand({
+        modelId: model.id,
+        modelInput: modelInput as unknown as DocumentType,
+        outputDataConfig: {
+          s3OutputDataConfig: { s3Uri: options.s3Uri },
+        },
+      });
+      const response = await getClient(model.region).send(command);
+      return response.invocationArn ?? "";
+    },
+    async () => {
+      const json = (await bedrockFetch(
+        "async-invoke",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            modelId: model.id,
+            modelInput,
+            outputDataConfig: {
+              s3OutputDataConfig: { s3Uri: options.s3Uri },
+            },
+          }),
+        },
+        model.region,
+      )) as { invocationArn?: string };
+      return json.invocationArn ?? "";
+    },
+  );
 
-    const json = (await bedrockFetch(
-      "async-invoke",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          modelId: model.id,
-          modelInput,
-          outputDataConfig: {
-            s3OutputDataConfig: { s3Uri: options.s3Uri },
-          },
-        }),
-      },
-      model.region,
-    )) as { invocationArn?: string };
-    return {
-      modelId: model.id,
-      modelName: model.name,
-      invocationArn: json.invocationArn ?? "",
-      s3Uri: options.s3Uri,
-      durationSeconds: effectiveDuration,
-      region: model.region,
-    };
-  }
+  return {
+    modelId: model.id,
+    modelName: model.name,
+    invocationArn,
+    s3Uri: options.s3Uri,
+    durationSeconds: effectiveDuration,
+    region: model.region,
+  };
 }
 
 export async function getVideoStatus(
@@ -137,41 +135,42 @@ export async function getVideoStatus(
   const arnRegion =
     rawRegion && /^[a-z]{2}(?:-[a-z]+)+-\d+$/.test(rawRegion) ? rawRegion : region;
 
-  try {
-    const command = new GetAsyncInvokeCommand({ invocationArn });
-    const response = await getClient(arnRegion).send(command);
-    return {
-      invocationArn,
-      status: response.status ?? "Unknown",
-      s3Uri: response.outputDataConfig?.s3OutputDataConfig?.s3Uri,
-      submitTime: response.submitTime?.toISOString(),
-      endTime: response.endTime?.toISOString(),
-      failureMessage: response.failureMessage,
-    };
-  } catch (sdkErr) {
-    if (!bearerToken) throw sdkErr;
-
-    // Raw HTTP fallback - extract the invocation ID from the ARN
-    const parts = invocationArn.split("/");
-    const invocationId = parts[parts.length - 1];
-    const json = (await bedrockFetch(
-      `async-invoke/${encodeURIComponent(invocationId)}`,
-      { method: "GET" },
-      arnRegion,
-    )) as {
-      status?: string;
-      outputDataConfig?: { s3OutputDataConfig?: { s3Uri?: string } };
-      submitTime?: string;
-      endTime?: string;
-      failureMessage?: string;
-    };
-    return {
-      invocationArn,
-      status: json.status ?? "Unknown",
-      s3Uri: json.outputDataConfig?.s3OutputDataConfig?.s3Uri,
-      submitTime: json.submitTime,
-      endTime: json.endTime,
-      failureMessage: json.failureMessage,
-    };
-  }
+  return withBearerFallback<VideoStatusResult>(
+    async () => {
+      const command = new GetAsyncInvokeCommand({ invocationArn });
+      const response = await getClient(arnRegion).send(command);
+      return {
+        invocationArn,
+        status: response.status ?? "Unknown",
+        s3Uri: response.outputDataConfig?.s3OutputDataConfig?.s3Uri,
+        submitTime: response.submitTime?.toISOString(),
+        endTime: response.endTime?.toISOString(),
+        failureMessage: response.failureMessage,
+      };
+    },
+    async () => {
+      // Raw HTTP fallback - extract the invocation ID from the ARN
+      const parts = invocationArn.split("/");
+      const invocationId = parts[parts.length - 1];
+      const json = (await bedrockFetch(
+        `async-invoke/${encodeURIComponent(invocationId)}`,
+        { method: "GET" },
+        arnRegion,
+      )) as {
+        status?: string;
+        outputDataConfig?: { s3OutputDataConfig?: { s3Uri?: string } };
+        submitTime?: string;
+        endTime?: string;
+        failureMessage?: string;
+      };
+      return {
+        invocationArn,
+        status: json.status ?? "Unknown",
+        s3Uri: json.outputDataConfig?.s3OutputDataConfig?.s3Uri,
+        submitTime: json.submitTime,
+        endTime: json.endTime,
+        failureMessage: json.failureMessage,
+      };
+    },
+  );
 }

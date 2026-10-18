@@ -22,6 +22,51 @@ export function getClient(modelRegion?: string): BedrockRuntimeClient {
   return client;
 }
 
+// SDK errors that mean the request was rejected before Bedrock did any work:
+// no credentials resolved, a bad or expired signature or token, or an identity
+// without access. Retrying those with the bearer token is safe. Anything else
+// (throttling, timeouts, 5xx, validation) is NOT retried, because the first
+// request may already have run and been billed - a retried StartAsyncInvoke
+// would start a second video job.
+const AUTH_ERROR_NAMES = new Set([
+  "CredentialsProviderError",
+  "TokenProviderError",
+  "UnrecognizedClientException",
+  "InvalidSignatureException",
+  "IncompleteSignatureException",
+  "MissingAuthenticationTokenException",
+  "ExpiredTokenException",
+  "AccessDeniedException",
+]);
+
+export function isAuthError(err: unknown): boolean {
+  return err instanceof Error && AUTH_ERROR_NAMES.has(err.name);
+}
+
+// Run the SDK call; on an auth error, and only when a bearer token is set,
+// retry once over raw HTTP. If the retry fails too, the thrown error carries
+// both messages, so the SDK's reason is not lost behind the HTTP one.
+export async function withBearerFallback<T>(
+  sdkCall: () => Promise<T>,
+  httpCall: () => Promise<T>,
+  token: string | undefined = bearerToken,
+): Promise<T> {
+  try {
+    return await sdkCall();
+  } catch (sdkErr) {
+    if (!token || !isAuthError(sdkErr)) throw sdkErr;
+    try {
+      return await httpCall();
+    } catch (httpErr) {
+      const sdkMsg = (sdkErr as Error).message;
+      const httpMsg = httpErr instanceof Error ? httpErr.message : String(httpErr);
+      throw new Error(`${httpMsg} (after SDK ${(sdkErr as Error).name}: ${sdkMsg})`, {
+        cause: sdkErr,
+      });
+    }
+  }
+}
+
 // Raw HTTP fallback for bearer-token auth when the SDK doesn't pick the token
 // up. Returns the parsed JSON body; throws with the API error text on non-2xx.
 export async function bedrockFetch(

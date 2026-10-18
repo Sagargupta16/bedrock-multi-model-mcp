@@ -5,7 +5,7 @@ import {
   type InferenceConfiguration,
 } from "@aws-sdk/client-bedrock-runtime";
 import { resolveModelId, getModelInfo } from "../models.js";
-import { bearerToken, bedrockFetch, getClient } from "./client.js";
+import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
 
 export interface ConverseOptions {
   modelId: string;
@@ -54,52 +54,48 @@ export async function converse(options: ConverseOptions): Promise<ConverseResult
   }
 
   const start = Date.now();
-  let text: string;
-  let inputTokens: number;
-  let outputTokens: number;
-  let stopReason: string;
 
-  try {
-    // Try AWS SDK first (handles both IAM and bearer token via env var)
-    const command = new ConverseCommand({
-      modelId: resolvedId,
-      messages,
-      system,
-      inferenceConfig,
-    });
-    const response = await getClient().send(command);
+  // SDK first (handles IAM and, on SDK >= 3.840.0, the bearer token too); raw
+  // HTTP with the bearer token only if the SDK was rejected on auth.
+  const parsed = await withBearerFallback<ConverseResponse>(
+    async () => {
+      const response = await getClient().send(
+        new ConverseCommand({ modelId: resolvedId, messages, system, inferenceConfig }),
+      );
+      return {
+        output: {
+          message: {
+            content: response.output?.message?.content?.map((b) => ({
+              text: "text" in b ? b.text : "",
+            })),
+          },
+        },
+        stopReason: response.stopReason,
+        usage: response.usage,
+      };
+    },
+    async () => {
+      const body: Record<string, unknown> = {
+        messages: messages.map((m) => ({
+          role: m.role,
+          content: m.content?.map((c) => ("text" in c ? { text: c.text } : c)),
+        })),
+        inferenceConfig,
+      };
+      if (system) {
+        body.system = system.map((s) => ("text" in s ? { text: s.text } : s));
+      }
+      return (await bedrockFetch(
+        `model/${encodeURIComponent(resolvedId)}/converse`,
+        { method: "POST", body: JSON.stringify(body) },
+      )) as ConverseResponse;
+    },
+  );
 
-    const outputContent = response.output?.message?.content;
-    text = outputContent?.map((b) => ("text" in b ? b.text : "")).join("") ?? "";
-    inputTokens = response.usage?.inputTokens ?? 0;
-    outputTokens = response.usage?.outputTokens ?? 0;
-    stopReason = response.stopReason ?? "unknown";
-  } catch (sdkErr) {
-    // If SDK fails and we have a bearer token, fall back to raw HTTP
-    if (!bearerToken) throw sdkErr;
-
-    const body: Record<string, unknown> = {
-      messages: messages.map((m) => ({
-        role: m.role,
-        content: m.content?.map((c) => ("text" in c ? { text: c.text } : c)),
-      })),
-      inferenceConfig,
-    };
-    if (system) {
-      body.system = system.map((s) => ("text" in s ? { text: s.text } : s));
-    }
-
-    const response = (await bedrockFetch(
-      `model/${encodeURIComponent(resolvedId)}/converse`,
-      { method: "POST", body: JSON.stringify(body) },
-    )) as ConverseResponse;
-
-    const outputContent = response.output?.message?.content;
-    text = outputContent?.map((b) => b.text ?? "").join("") ?? "";
-    inputTokens = response.usage?.inputTokens ?? 0;
-    outputTokens = response.usage?.outputTokens ?? 0;
-    stopReason = response.stopReason ?? "unknown";
-  }
+  const text = parsed.output?.message?.content?.map((b) => b.text ?? "").join("") ?? "";
+  const inputTokens = parsed.usage?.inputTokens ?? 0;
+  const outputTokens = parsed.usage?.outputTokens ?? 0;
+  const stopReason = parsed.stopReason ?? "unknown";
 
   return {
     modelId: resolvedId,

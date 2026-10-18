@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { z } from "zod";
 import { ImageModelSchema, type ImageModel } from "../types.js";
-import { bearerToken, bedrockFetch, getClient } from "./client.js";
+import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
 
 // Image model catalog loaded and validated from src/data/image-models.json.
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
@@ -154,26 +154,26 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
 
   const body = buildRequestBody(options, width, height, entry?.format);
   const start = Date.now();
-  let responseBody: string;
-
-  try {
-    const command = new InvokeModelCommand({
-      modelId,
-      body: new TextEncoder().encode(body),
-      contentType: "application/json",
-      accept: "application/json",
-    });
-    const response = await getClient(modelRegion).send(command);
-    responseBody = new TextDecoder().decode(response.body);
-  } catch (sdkErr) {
-    if (!bearerToken) throw sdkErr;
-    const json = await bedrockFetch(
-      `model/${encodeURIComponent(modelId)}/invoke`,
-      { method: "POST", body },
-      modelRegion,
-    );
-    responseBody = JSON.stringify(json);
-  }
+  const responseBody = await withBearerFallback(
+    async () => {
+      const command = new InvokeModelCommand({
+        modelId,
+        body: new TextEncoder().encode(body),
+        contentType: "application/json",
+        accept: "application/json",
+      });
+      const response = await getClient(modelRegion).send(command);
+      return new TextDecoder().decode(response.body);
+    },
+    async () => {
+      const json = await bedrockFetch(
+        `model/${encodeURIComponent(modelId)}/invoke`,
+        { method: "POST", body },
+        modelRegion,
+      );
+      return JSON.stringify(json);
+    },
+  );
 
   const latencyMs = Date.now() - start;
 
