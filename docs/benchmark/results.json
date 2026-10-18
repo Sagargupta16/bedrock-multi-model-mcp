@@ -50,7 +50,7 @@
       "total": 6,
       "medianLatencyMs": 2794.5,
       "medianOutputTokens": 111,
-      "medianTokensPerSec": 39.21728356021333,
+      "medianTokensPerSec": 39.2,
       "hitCap": 0
     },
     {
@@ -61,7 +61,7 @@
       "total": 6,
       "medianLatencyMs": 4176.5,
       "medianOutputTokens": 134,
-      "medianTokensPerSec": 29.524331090596153,
+      "medianTokensPerSec": 29.5,
       "hitCap": 0
     },
     {
@@ -72,7 +72,7 @@
       "total": 6,
       "medianLatencyMs": 4460.5,
       "medianOutputTokens": 153.5,
-      "medianTokensPerSec": 29.99005792124167,
+      "medianTokensPerSec": 30,
       "hitCap": 1
     },
     {
@@ -83,7 +83,7 @@
       "total": 6,
       "medianLatencyMs": 2403,
       "medianOutputTokens": 97.5,
-      "medianTokensPerSec": 39.284954449208584,
+      "medianTokensPerSec": 39.3,
       "hitCap": 0
     },
     {
@@ -94,7 +94,7 @@
       "total": 6,
       "medianLatencyMs": 5610.5,
       "medianOutputTokens": 126.5,
-      "medianTokensPerSec": 20.51108268502005,
+      "medianTokensPerSec": 20.5,
       "hitCap": 0
     },
     {
@@ -105,7 +105,7 @@
       "total": 6,
       "medianLatencyMs": 2690,
       "medianOutputTokens": 97.5,
-      "medianTokensPerSec": 36.08523144046565,
+      "medianTokensPerSec": 36.1,
       "hitCap": 0
     },
     {
@@ -116,7 +116,7 @@
       "total": 6,
       "medianLatencyMs": 3419,
       "medianOutputTokens": 80,
-      "medianTokensPerSec": 24.26172790081065,
+      "medianTokensPerSec": 24.3,
       "hitCap": 0
     },
     {
@@ -127,7 +127,7 @@
       "total": 6,
       "medianLatencyMs": 2095,
       "medianOutputTokens": 76.5,
-      "medianTokensPerSec": 36.17096804087602,
+      "medianTokensPerSec": 36.2,
       "hitCap": 0
     },
     {
@@ -138,7 +138,7 @@
       "total": 6,
       "medianLatencyMs": 2375.5,
       "medianOutputTokens": 179,
-      "medianTokensPerSec": 71.35298978754807,
+      "medianTokensPerSec": 71.4,
       "hitCap": 3
     },
     {
@@ -149,7 +149,7 @@
       "total": 6,
       "medianLatencyMs": 1355,
       "medianOutputTokens": 86.5,
-      "medianTokensPerSec": 64.67822238613313,
+      "medianTokensPerSec": 64.7,
       "hitCap": 0
     },
     {
@@ -160,7 +160,7 @@
       "total": 6,
       "medianLatencyMs": 1363,
       "medianOutputTokens": 98.5,
-      "medianTokensPerSec": 71.13460863460864,
+      "medianTokensPerSec": 71.1,
       "hitCap": 0
     },
     {
@@ -171,7 +171,7 @@
       "total": 6,
       "medianLatencyMs": 1521,
       "medianOutputTokens": 107,
-      "medianTokensPerSec": 66.15916311026442,
+      "medianTokensPerSec": 66.2,
       "hitCap": 0
     },
     {
@@ -182,7 +182,7 @@
       "total": 6,
       "medianLatencyMs": 1245.5,
       "medianOutputTokens": 60.5,
-      "medianTokensPerSec": 50.07756922837361,
+      "medianTokensPerSec": 50.1,
       "hitCap": 0
     },
     {
@@ -193,7 +193,7 @@
       "total": 6,
       "medianLatencyMs": 1878.5,
       "medianOutputTokens": 63,
-      "medianTokensPerSec": 34.62137215172896,
+      "medianTokensPerSec": 34.6,
       "hitCap": 0
     },
     {
@@ -204,7 +204,7 @@
       "total": 6,
       "medianLatencyMs": 1289.5,
       "medianOutputTokens": 70.5,
-      "medianTokensPerSec": 36.9933288295896,
+      "medianTokensPerSec": 37,
       "hitCap": 0
     },
     {
@@ -215,7 +215,7 @@
       "total": 6,
       "medianLatencyMs": 2315,
       "medianOutputTokens": 98,
-      "medianTokensPerSec": 41.652617631095985,
+      "medianTokensPerSec": 41.7,
       "hitCap": 0
     },
     {
@@ -226,7 +226,7 @@
       "total": 6,
       "medianLatencyMs": 2057,
       "medianOutputTokens": 85,
-      "medianTokensPerSec": 42.17259488563727,
+      "medianTokensPerSec": 42.2,
       "hitCap": 0
     },
     {
@@ -237,7 +237,7 @@
       "total": 6,
       "medianLatencyMs": 1491,
       "medianOutputTokens": 61,
-      "medianTokensPerSec": 43.435776201733646,
+      "medianTokensPerSec": 43.4,
       "hitCap": 0
     },
     {
@@ -248,7 +248,7 @@
       "total": 6,
       "medianLatencyMs": 2152,
       "medianOutputTokens": 57.5,
-      "medianTokensPerSec": 27.6945493566747,
+      "medianTokensPerSec": 27.7,
       "hitCap": 0
     },
     {
@@ -259,7 +259,7 @@
       "total": 6,
       "medianLatencyMs": 2350.5,
       "medianOutputTokens": 256,
-      "medianTokensPerSec": 108.9593875814894,
+      "medianTokensPerSec": 109,
       "hitCap": 6
     },
     {
@@ -270,7 +270,7 @@
       "total": 6,
       "medianLatencyMs": 1131.5,
       "medianOutputTokens": 56,
-      "medianTokensPerSec": 50.420987573014244,
+      "medianTokensPerSec": 50.4,
       "hitCap": 0
     },
     {
@@ -281,7 +281,7 @@
       "total": 6,
       "medianLatencyMs": 1551,
       "medianOutputTokens": 79.5,
-      "medianTokensPerSec": 53.177314292275426,
+      "medianTokensPerSec": 53.2,
       "hitCap": 0
     },
     {
@@ -292,7 +292,7 @@
       "total": 6,
       "medianLatencyMs": 1175,
       "medianOutputTokens": 59,
-      "medianTokensPerSec": 46.36051774337686,
+      "medianTokensPerSec": 46.4,
       "hitCap": 0
     },
     {
@@ -303,7 +303,7 @@
       "total": 6,
       "medianLatencyMs": 4603,
       "medianOutputTokens": 55,
-      "medianTokensPerSec": 13.26909380976891,
+      "medianTokensPerSec": 13.3,
       "hitCap": 0
     },
     {
@@ -314,7 +314,7 @@
       "total": 6,
       "medianLatencyMs": 1502,
       "medianOutputTokens": 205.5,
-      "medianTokensPerSec": 113.6058997528263,
+      "medianTokensPerSec": 113.6,
       "hitCap": 2
     },
     {
@@ -325,7 +325,7 @@
       "total": 6,
       "medianLatencyMs": 1820,
       "medianOutputTokens": 152,
-      "medianTokensPerSec": 87.9721076301813,
+      "medianTokensPerSec": 88,
       "hitCap": 1
     }
   ],

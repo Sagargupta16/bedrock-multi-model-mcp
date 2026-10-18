@@ -227,8 +227,9 @@ export function formatJudgeReport(report: JudgeReport): string {
     out.push("| Rank | Model | Score | Tokens out | Latency |", "| --- | --- | --- | --- | --- |");
     ranked.forEach((c, i) => {
       const score = verdict.scores[c.label];
+      const scoreText = score === undefined ? "-" : `${score}/10`;
       out.push(
-        `| ${i + 1} | ${c.name} | ${score === undefined ? "-" : `${score}/10`} | ` +
+        `| ${i + 1} | ${c.name} | ${scoreText} | ` +
           `${c.result!.outputTokens} | ${seconds(c.result!.latencyMs)} |`,
       );
     });

@@ -31,8 +31,9 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
 
-      # Trusted publishing needs npm >= 11.5.1.
-      - run: npm install -g npm@latest
+      # Trusted publishing needs npm >= 11.5.1. Pinned so a release never picks
+      # up an unreviewed npm; lifecycle scripts stay off for the install.
+      - run: npm install -g --ignore-scripts npm@12.2.0
 
       - name: Tag, package.json and server.json agree on the version
         run: |
@@ -56,7 +57,7 @@ jobs:
         env:
           MCP_PUBLISHER_VERSION: v1.8.1
         run: |
-          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          curl -fsSL --proto '=https' --tlsv1.2 "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
 
       - run: ./mcp-publisher validate server.json
       - run: ./mcp-publisher login github-oidc
