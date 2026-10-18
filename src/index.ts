@@ -9,6 +9,7 @@ import { generateImage, IMAGE_MODELS, getImageModel } from "./bedrock/image.js";
 import { startVideoGeneration, getVideoStatus, VIDEO_MODELS } from "./bedrock/video.js";
 import { embed, cosineSimilarity, EMBEDDING_MODELS, getEmbeddingModel } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
+import { runJudge, formatJudgeReport } from "./judge.js";
 
 // Read the version from package.json (one directory above the compiled
 // dist/index.js) so the version reported to MCP clients cannot drift from the
@@ -116,6 +117,51 @@ server.registerTool(
     }
 
     return { content: [{ type: "text" as const, text: sections.join("\n\n---\n\n") }] };
+  }
+);
+
+// --- Tool: bedrock_judge ---
+// Several models answer, a judge model scores them blind and picks a winner.
+server.registerTool(
+  "bedrock_judge",
+  {
+    description:
+      "Send the same prompt to 2-5 Bedrock models, then have a judge model (default Claude Opus) " +
+      "score the answers blind - shuffled and labeled A/B/C with model names hidden - and pick a winner. " +
+      "Set synthesize to also get one merged answer that keeps the best of each.",
+    inputSchema: {
+      models: z.array(z.string()).min(2).max(5).describe(
+        "List of 2-5 candidate model aliases or IDs (e.g. ['llama4', 'nova-pro', 'deepseek'])"
+      ),
+      prompt: z.string().describe("The prompt every candidate answers"),
+      judge: z.string().optional().describe("Judge model alias or ID (default 'claude-opus')"),
+      criteria: z.string().optional().describe(
+        "What the judge scores on (default 'correctness, completeness, clarity and concision')"
+      ),
+      synthesize: z.boolean().optional().describe("Also return one merged final answer (default false)"),
+      system: z.string().optional().describe("Optional system prompt sent to the candidates"),
+      temperature: z.number().min(0).max(1).optional().describe("Sampling temperature for the candidates"),
+      max_tokens: z.number().positive().optional().describe("Maximum tokens per candidate response"),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+  async ({ models, prompt, judge, criteria, synthesize, system, temperature, max_tokens }) => {
+    try {
+      const report = await runJudge({
+        models,
+        prompt,
+        judge,
+        criteria,
+        synthesize,
+        system,
+        temperature,
+        maxTokens: max_tokens,
+      });
+      return { content: [{ type: "text" as const, text: formatJudgeReport(report) }] };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+    }
   }
 );
 

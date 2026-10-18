@@ -1,0 +1,125 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import type { ConverseOptions, ConverseResult } from "./bedrock/converse.js";
+import {
+  assignLabels,
+  buildJudgePrompt,
+  formatJudgeReport,
+  parseVerdict,
+  runJudge,
+} from "./judge.js";
+
+// random() that always returns 0.99 keeps Fisher-Yates from moving anything.
+const keepOrder = () => 0.99;
+
+function fakeResult(modelId: string, text: string): ConverseResult {
+  return { modelId, text, inputTokens: 10, outputTokens: 20, stopReason: "end_turn", latencyMs: 1500 };
+}
+
+test("assignLabels resolves aliases and labels A.. in shuffled order", () => {
+  const fixed = assignLabels(["llama4", "nova-pro"], keepOrder);
+  assert.deepEqual(fixed.map((c) => c.label), ["A", "B"]);
+  assert.equal(fixed[1].modelId, "amazon.nova-pro-v1:0");
+  assert.equal(fixed[1].name, "Nova Pro (Amazon)");
+
+  // random() = 0 swaps every position with index 0, reversing a 2-item list.
+  const swapped = assignLabels(["llama4", "nova-pro"], () => 0);
+  assert.equal(swapped[0].modelId, "amazon.nova-pro-v1:0");
+  assert.equal(swapped[0].label, "A");
+});
+
+test("buildJudgePrompt hides model names and asks for every label", () => {
+  const prompt = buildJudgePrompt("What is 2+2?", [
+    { label: "A", text: "4" },
+    { label: "B", text: "five" },
+  ]);
+  assert.match(prompt, /<answer label="A">\n4\n<\/answer>/);
+  assert.match(prompt, /"A": <1-10>, "B": <1-10>/);
+  assert.doesNotMatch(prompt, /final_answer/);
+  assert.match(buildJudgePrompt("q", [{ label: "A", text: "x" }], { synthesize: true }), /final_answer/);
+});
+
+test("parseVerdict reads JSON wrapped in prose or a code fence", () => {
+  const text = 'Here you go:\n```json\n{"scores":{"A":9,"B":4},"winner":"a","reasoning":"A is right."}\n```';
+  const v = parseVerdict(text, ["A", "B"]);
+  assert.ok(v);
+  assert.equal(v.winner, "A");
+  assert.equal(v.scores.B, 4);
+});
+
+test("parseVerdict rejects malformed JSON and unknown winners", () => {
+  assert.equal(parseVerdict("no json here", ["A", "B"]), undefined);
+  assert.equal(parseVerdict('{"scores":{"A":9}', ["A"]), undefined);
+  assert.equal(parseVerdict('{"scores":{"A":9},"winner":"C","reasoning":"x"}', ["A", "B"]), undefined);
+  assert.equal(parseVerdict('{"winner":"A","reasoning":"x"}', ["A"]), undefined);
+});
+
+test("runJudge sends anonymous answers to the judge and maps the winner back", async () => {
+  const calls: ConverseOptions[] = [];
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> => {
+    calls.push(o);
+    if (o.modelId === "us.anthropic.claude-opus-5") {
+      return fakeResult(o.modelId, '{"scores":{"A":3,"B":8},"winner":"B","reasoning":"B is correct."}');
+    }
+    return fakeResult(o.modelId, o.modelId.includes("nova") ? "nova says 4" : "llama says 5");
+  };
+  const report = await runJudge({ models: ["llama4", "nova-pro"], prompt: "2+2?" }, ask, keepOrder);
+
+  assert.equal(calls.length, 3);
+  const judgeCall = calls[2];
+  assert.equal(judgeCall.temperature, 0);
+  assert.doesNotMatch(judgeCall.prompt, /Llama|Nova/, "judge must not see model names");
+  assert.equal(report.verdict?.winner, "B");
+
+  const text = formatJudgeReport(report);
+  assert.match(text, /## Winner: Nova Pro \(Amazon\)/);
+  assert.match(text, /\| 1 \| Nova Pro \(Amazon\) \| 8\/10 \|/);
+  assert.match(text, /### Answer A: Llama 4 Maverick/);
+});
+
+test("runJudge reports failed candidates and skips the judge when one answer is left", async () => {
+  let judged = false;
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> => {
+    if (o.modelId.includes("nova")) throw new Error("AccessDeniedException: no access");
+    if (o.modelId.includes("opus")) judged = true;
+    return fakeResult(o.modelId, "only answer");
+  };
+  const report = await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder);
+  assert.equal(judged, false);
+  const text = formatJudgeReport(report);
+  assert.match(text, /Only Llama 4 Maverick 17B \(Meta\) answered/);
+  assert.match(text, /\*\*Failed:\*\* Nova Pro \(Amazon\) - AccessDeniedException/);
+});
+
+test("runJudge throws when no candidate answers", async () => {
+  const ask = async (): Promise<ConverseResult> => {
+    throw new Error("ThrottlingException");
+  };
+  await assert.rejects(
+    runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+    /No candidate model answered/,
+  );
+});
+
+test("a failed judge call still returns the candidate answers", async () => {
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> => {
+    if (o.modelId.includes("opus")) throw new Error("ModelTimeoutException");
+    return fakeResult(o.modelId, `answer from ${o.modelId}`);
+  };
+  const text = formatJudgeReport(
+    await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+  );
+  assert.match(text, /Judge Claude Opus 5 \(Anthropic\) failed/);
+  assert.match(text, /answer from amazon\.nova-pro-v1:0/);
+});
+
+test("an unparsable verdict falls back to the raw judge text with the label key", async () => {
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> =>
+    fakeResult(o.modelId, o.modelId.includes("opus") ? "I prefer the second one." : "x");
+  const text = formatJudgeReport(
+    await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+  );
+  assert.match(text, /did not return a parsable verdict/);
+  assert.match(text, /A = Llama 4 Maverick 17B \(Meta\), B = Nova Pro \(Amazon\)/);
+  assert.match(text, /I prefer the second one\./);
+});
