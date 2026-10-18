@@ -1,0 +1,52 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Sagargupta16/bedrock-multi-model-mcp",
+  "title": "Bedrock Multi-Model",
+  "description": "Ask, compare and judge 26 AWS Bedrock text models, plus image, video and embeddings.",
+  "repository": {
+    "url": "https://github.com/Sagargupta16/bedrock-multi-model-mcp",
+    "source": "github"
+  },
+  "version": "0.5.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "bedrock-multi-model-mcp",
+      "version": "0.5.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AWS_BEARER_TOKEN_BEDROCK",
+          "description": "Bedrock API key. Leave unset to use the standard AWS credential chain.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "AWS_REGION",
+          "description": "Region for text and embedding calls (default us-east-1).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string",
+          "default": "us-east-1"
+        },
+        {
+          "name": "AWS_PROFILE",
+          "description": "Named AWS profile, when using IAM credentials instead of a bearer token.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "BEDROCK_MCP_OUTPUT_DIR",
+          "description": "Directory for generated images (default: cwd, or ~/bedrock-images).",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

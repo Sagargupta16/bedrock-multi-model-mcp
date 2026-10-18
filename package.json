@@ -1,6 +1,7 @@
 {
   "name": "bedrock-multi-model-mcp",
-  "version": "0.4.1",
+  "version": "0.5.0",
+  "mcpName": "io.github.Sagargupta16/bedrock-multi-model-mcp",
   "description": "MCP server for AWS Bedrock - text, image, video, and embeddings across Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS and more",
   "type": "module",
   "main": "dist/index.js",
@@ -19,6 +20,7 @@
     "clean": "rimraf dist",
     "lint": "tsc --noEmit",
     "test": "npm run build && node --test \"dist/**/*.test.js\"",
+    "benchmark": "npm run build && node scripts/benchmark.mjs",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [

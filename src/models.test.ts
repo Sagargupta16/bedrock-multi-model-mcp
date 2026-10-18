@@ -212,3 +212,19 @@ test("the version reported to MCP clients resolves from package.json", () => {
   ) as { version?: string };
   assert.match(pkg.version ?? "", /^\d+\.\d+\.\d+$/);
 });
+
+test("server.json matches package.json name and version for the MCP Registry", () => {
+  // The registry rejects a publish whose server.json name differs from the
+  // npm package's mcpName, and the release workflow refuses a version skew.
+  const pkg = JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+  ) as { name: string; version: string; mcpName?: string };
+  const server = JSON.parse(
+    readFileSync(new URL("../server.json", import.meta.url), "utf-8"),
+  ) as { name: string; version: string; description: string; packages: { identifier: string; version: string }[] };
+  assert.equal(server.name, pkg.mcpName);
+  assert.equal(server.version, pkg.version);
+  assert.equal(server.packages[0].identifier, pkg.name);
+  assert.equal(server.packages[0].version, pkg.version);
+  assert.ok(server.description.length <= 100, "registry caps description at 100 characters");
+});

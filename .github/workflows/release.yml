@@ -1,0 +1,63 @@
+name: Release
+
+# Push a tag like v0.5.0 to publish that version to npm and then to the
+# official MCP Registry. No long-lived tokens: npm uses trusted publishing
+# (OIDC, provenance attached automatically) and mcp-publisher logs in with the
+# same GitHub OIDC token. One-time setup is in CONTRIBUTING.md, "Releasing".
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing and mcp-publisher github-oidc
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
+
+      - name: Tag, package.json and server.json agree on the version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pkg="$(node -p "require('./package.json').version")"
+          srv="$(node -p "require('./server.json').version")"
+          srv_pkg="$(node -p "require('./server.json').packages[0].version")"
+          echo "tag=$tag package.json=$pkg server.json=$srv server.json package=$srv_pkg"
+          test "$tag" = "$pkg"
+          test "$tag" = "$srv"
+          test "$tag" = "$srv_pkg"
+
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm test
+
+      # prepublishOnly cleans and rebuilds dist before packing.
+      - run: npm publish --access public
+
+      - name: Install mcp-publisher
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.1
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+
+      - run: ./mcp-publisher validate server.json
+      - run: ./mcp-publisher login github-oidc
+      - run: ./mcp-publisher publish
