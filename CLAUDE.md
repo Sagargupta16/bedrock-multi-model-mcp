@@ -38,24 +38,29 @@ npm run test     # builds, then node --test dist/**/*.test.js
 npm run lint     # tsc --noEmit
 ```
 
-- One suite: `src/models.test.ts`. Tests run against compiled `dist/`, so build first (`npm run test` handles it).
+- Suites: `src/models.test.ts` (registries, server.json/package.json sync), `src/judge.test.ts` (bedrock_judge with an injected fake converse), `src/bedrock/client.test.ts` (bearer fallback rules). Tests run against compiled `dist/`, so build first (`npm run test` handles it).
+- `npm run benchmark` makes live, billed Bedrock calls; `node scripts/benchmark.mjs --from docs/benchmark/results.json` only re-renders the table.
 
 ## Entry points
 
-- `src/index.ts` -- MCP server: tool registration (bedrock_ask, bedrock_compare, bedrock_list_models, bedrock_generate_image, bedrock_generate_video, bedrock_video_status, bedrock_embed_similarity), stdio transport.
+- `src/index.ts` -- MCP server: tool registration (bedrock_ask, bedrock_compare, bedrock_judge, bedrock_list_models, bedrock_generate_image, bedrock_generate_video, bedrock_video_status, bedrock_embed_similarity), stdio transport.
+- `scripts/call-tool.mjs` -- stdio MCP client for smoke tests; `scripts/benchmark.mjs` -- latency benchmark that also rewrites the README block between `<!-- benchmark:start -->` and `<!-- benchmark:end -->` (do not hand-edit that block).
 
 ## Key files
 
 - `src/data/*.json` -- model registries (text/image/video/embedding). Source of truth for the catalog; edit these to add/remove models, not code.
 - `src/models.ts` -- loads + validates registry data, resolves aliases.
 - `src/types.ts` -- Zod schemas the registries are validated against at load time.
-- `src/bedrock/client.ts` -- shared region/auth config + raw HTTP bearer-token fallback.
+- `src/bedrock/client.ts` -- shared region/auth config + `withBearerFallback` (raw HTTP retry on auth errors only).
+- `src/judge.ts` -- bedrock_judge: shuffled blind labels, judge prompt, verdict parsing, report formatting.
+- `server.json` + `.github/workflows/release.yml` -- MCP Registry metadata and the tag-triggered npm + registry publish (OIDC, no stored tokens).
 - `src/bedrock/{converse,image,video,embed}.ts` -- per-modality API wrappers (Converse / InvokeModel / StartAsyncInvoke).
 
 ## Gotchas
 
 - Build copies `src/data/` to `dist/data/` (`copy-data` script). Editing a registry JSON without rebuilding leaves the running server stale.
-- Auth is dual-path: `AWS_BEARER_TOKEN_BEDROCK` (SDK >= 3.840.0 reads it natively) with a raw HTTP `Authorization: Bearer` fallback in `client.ts`, else the standard IAM credential chain.
+- Auth is dual-path: `AWS_BEARER_TOKEN_BEDROCK` (SDK >= 3.840.0 reads it natively) with a raw HTTP `Authorization: Bearer` fallback in `client.ts`, else the standard IAM credential chain. The fallback fires only on auth-rejection error names; never widen it to throttles or timeouts (a retried StartAsyncInvoke bills a second video).
+- Version lives in three places: `package.json`, and `version` + `packages[0].version` in `server.json`. A test fails on skew.
 - Regions split: text defaults to `AWS_REGION` (us-east-1); image (Stability) and video (Luma Ray 2) models live in us-west-2, and the video output S3 bucket must also be in us-west-2.
 - Many foundation models require the `us.` cross-region inference profile prefix for on-demand invocation -- registries store the verified-working form per model. Keep only ACTIVE models (EOL entries like Nova Reel were purged).
 - Generated images land in `BEDROCK_MCP_OUTPUT_DIR`, falling back to cwd then `~/bedrock-images`.
@@ -73,6 +78,7 @@ npm run lint     # tsc --noEmit
 
 - `bedrock_ask` -- prompt one text model (alias or full model ID).
 - `bedrock_compare` -- same prompt to 2-5 models side by side.
+- `bedrock_judge` -- 2-5 models answer, a judge model (default claude-opus) scores them blind and picks a winner.
 - `bedrock_generate_image` / `bedrock_generate_video` + `bedrock_video_status` -- media generation.
 - `bedrock_embed_similarity` -- cosine-similarity matrix across 2+ texts.
 

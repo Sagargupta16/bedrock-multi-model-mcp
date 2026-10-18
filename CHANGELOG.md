@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-10-18
+
+### Added
+
+- `bedrock_judge` tool: 2-5 candidate models answer the same prompt, then a judge model (default `claude-opus`) scores them 1-10 and names a winner. The judge sees the answers shuffled and labeled A, B, C with the model names removed, so it cannot favor a name or a position; the tool maps the labels back and returns a ranked table, the judge's reasoning and every answer. `criteria` changes what is scored and `synthesize: true` adds one merged answer. A failed candidate is listed and the rest are still judged; a failed judge call still returns the answers. Logic lives in `src/judge.ts` with 9 tests in `src/judge.test.ts`.
+- `scripts/benchmark.mjs` (`npm run benchmark`): runs 2 fixed prompts x 3 runs through every text model and writes `docs/benchmark/results.json`, `docs/benchmark/RESULTS.md` and the README table. The first run (2026-10-18, us-east-1) got 156 of 156 calls answered across all 26 models, with medians from 1.13 s (Nova Lite) to 5.61 s (Claude Fable 5.1). `--from <results.json>` re-renders the table without calling Bedrock.
+- `scripts/call-tool.mjs`: a minimal stdio MCP client that spawns the built server, lists its tools or calls one with credentials from the shell.
+- Animated terminal demo of a live `bedrock_judge` run at the top of the README (`docs/demo/judge-dark.svg` and `judge-light.svg`, arguments in `docs/demo/judge-args.json`).
+- npm and MCP Registry release prep: `mcpName` in `package.json`, a `server.json` that passes `mcp-publisher validate`, and `.github/workflows/release.yml`, which on a `v*` tag checks the tag against both manifests, runs lint and tests, publishes to npm with trusted publishing (OIDC, no stored token) and then publishes to the MCP Registry with `mcp-publisher login github-oidc`. A test fails if `server.json` and `package.json` disagree on name or version. Setup steps are in CONTRIBUTING, "Releasing".
+
+### Fixed
+
+- The bearer-token HTTP fallback retried after any SDK error, so a throttled or timed-out `StartAsyncInvoke` could start a second billed video job, and a real error was replaced by the fallback's. It now retries only on auth rejections that happen before Bedrock does any work (`CredentialsProviderError`, `TokenProviderError`, `UnrecognizedClientException`, signature and token errors, `AccessDeniedException`). Throttling, timeouts, 5xx and validation errors are returned as they are. If the retry fails too, the error names both causes and keeps the SDK error as `cause`. One `withBearerFallback` helper in `client.ts` replaces the five copies in the wrappers, with 7 tests in `src/bedrock/client.test.ts`.
+
 ## [0.4.1] - 2026-10-18
 
 ### Security
