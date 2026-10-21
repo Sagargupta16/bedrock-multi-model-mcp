@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { converse, type ConverseOptions, type ConverseResult } from "./bedrock/converse.js";
+import { converse, effortFor, type ConverseOptions, type ConverseResult } from "./bedrock/converse.js";
 import { getModelInfo, resolveModelId } from "./models.js";
+import type { EffortLevel } from "./types.js";
 
 // bedrock_judge: N candidate models answer the same prompt, then a judge model
 // scores the answers and picks a winner (and, on request, merges them into one
@@ -84,6 +85,28 @@ export function buildJudgePrompt(
   ].join("\n");
 }
 
+// JSON schema for the verdict, sent as structured output when the judge
+// supports it so the reply always parses: one score per label, the winner
+// limited to those labels, and final_answer only when a merge was asked for.
+export function buildVerdictSchema(labels: string[], synthesize = false): Record<string, unknown> {
+  const properties: Record<string, unknown> = {
+    scores: {
+      type: "object",
+      properties: Object.fromEntries(labels.map((l) => [l, { type: "number" }])),
+      required: labels,
+      additionalProperties: false,
+    },
+    winner: { type: "string", enum: labels },
+    reasoning: { type: "string" },
+  };
+  const required = ["scores", "winner", "reasoning"];
+  if (synthesize) {
+    properties.final_answer = { type: "string" };
+    required.push("final_answer");
+  }
+  return { type: "object", properties, required, additionalProperties: false };
+}
+
 // Pulls the first {...} block out of the judge's reply (models often wrap JSON
 // in a code fence or a sentence) and validates it. Returns undefined when the
 // reply is not usable, so the caller can show the raw text instead.
@@ -119,6 +142,7 @@ export interface JudgeOptions {
   system?: string;
   temperature?: number;
   maxTokens?: number;
+  effort?: EffortLevel;
   judge?: string;
   criteria?: string;
   synthesize?: boolean;
@@ -150,6 +174,7 @@ export async function runJudge(
         system: options.system,
         temperature: options.temperature,
         maxTokens: options.maxTokens,
+        effort: effortFor(c.modelId, options.effort),
       }),
     ),
   );
@@ -171,9 +196,13 @@ export async function runJudge(
     answered.map((c) => ({ label: c.label, text: c.result!.text })),
     { criteria: options.criteria, synthesize: options.synthesize },
   );
+  const labels = answered.map((c) => c.label);
+  const schema = getModelInfo(judgeId)?.capabilities.includes("structured_output")
+    ? buildVerdictSchema(labels, options.synthesize)
+    : undefined;
   let judgeResult: ConverseResult;
   try {
-    judgeResult = await ask({ modelId: judgeId, prompt: judgePrompt, temperature: 0 });
+    judgeResult = await ask({ modelId: judgeId, prompt: judgePrompt, temperature: 0, schema, schemaName: "verdict" });
   } catch (err) {
     return {
       judgeId,
@@ -181,10 +210,7 @@ export async function runJudge(
       judgeError: err instanceof Error ? err.message : String(err),
     };
   }
-  const verdict = parseVerdict(
-    judgeResult.text,
-    answered.map((c) => c.label),
-  );
+  const verdict = parseVerdict(judgeResult.text, labels);
   return {
     judgeId,
     candidates,

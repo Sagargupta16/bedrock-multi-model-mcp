@@ -52,11 +52,16 @@ Before a new model ID lands:
    fails. Earlier models still accept it (Haiku 4.5, Opus 4.6 and Sonnet 4.6 all answer
    normally with it), so add the flag only for a model that actually returns the 400 -
    setting it otherwise just drops the caller's `temperature` silently.
-3. **Add an assertion.** Put a matching check in `src/models.test.ts` - at minimum that
+3. **Probe the two options.** Send one call with Converse `outputConfig.textFormat` (a small
+   JSON schema) and one with `outputConfig.effort`. Add `structured_output` to
+   `capabilities` and `"effort": true` only for what the model accepted; a model that
+   rejects either answers "This model doesn't support the outputConfig field" or "...the
+   effort field". `src/models.test.ts` pins both lists.
+4. **Add an assertion.** Put a matching check in `src/models.test.ts` - at minimum that
    the alias resolves to the ID you intended. Bare-tier aliases (`claude-sonnet`,
    `fable`) track the current model in that tier; version-pinned aliases
    (`claude-sonnet-4.6`) keep the older model reachable.
-4. **Only ACTIVE models.** Entries that AWS or the provider has marked end-of-life get
+5. **Only ACTIVE models.** Entries that AWS or the provider has marked end-of-life get
    removed, not kept for compatibility. `src/models.test.ts` bans the IDs already retired.
 
 Update the model table in `README.md` in the same change so the docs and the registry

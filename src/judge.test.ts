@@ -4,6 +4,7 @@ import type { ConverseOptions, ConverseResult } from "./bedrock/converse.js";
 import {
   assignLabels,
   buildJudgePrompt,
+  buildVerdictSchema,
   formatJudgeReport,
   parseVerdict,
   runJudge,
@@ -64,7 +65,7 @@ test("runJudge sends anonymous answers to the judge and maps the winner back", a
   const calls: ConverseOptions[] = [];
   const ask = async (o: ConverseOptions): Promise<ConverseResult> => {
     calls.push(o);
-    if (o.modelId === "us.anthropic.claude-opus-5") {
+    if (o.modelId === "us.anthropic.claude-opus-5-5") {
       return fakeResult(o.modelId, '{"scores":{"A":3,"B":8},"winner":"B","reasoning":"B is correct."}');
     }
     return fakeResult(o.modelId, o.modelId.includes("nova") ? "nova says 4" : "llama says 5");
@@ -81,6 +82,41 @@ test("runJudge sends anonymous answers to the judge and maps the winner back", a
   assert.match(text, /## Winner: Nova Pro \(Amazon\)/);
   assert.match(text, /\| 1 \| Nova Pro \(Amazon\) \| 8\/10 \|/);
   assert.match(text, /### Answer A: Llama 4 Maverick/);
+});
+
+test("buildVerdictSchema scores every label and limits the winner to them", () => {
+  const schema = buildVerdictSchema(["A", "B"]) as {
+    properties: { scores: { required: string[] }; winner: { enum: string[] } };
+    required: string[];
+    additionalProperties: boolean;
+  };
+  assert.deepEqual(schema.properties.scores.required, ["A", "B"]);
+  assert.deepEqual(schema.properties.winner.enum, ["A", "B"]);
+  assert.deepEqual(schema.required, ["scores", "winner", "reasoning"]);
+  assert.equal(schema.additionalProperties, false);
+  assert.ok((buildVerdictSchema(["A"], true) as { required: string[] }).required.includes("final_answer"));
+});
+
+test("a structured-output judge gets the verdict schema; candidates get effort", async () => {
+  const calls: ConverseOptions[] = [];
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> => {
+    calls.push(o);
+    return o.schema
+      ? fakeResult(o.modelId, '{"scores":{"A":7,"B":6},"winner":"A","reasoning":"A."}')
+      : fakeResult(o.modelId, "an answer");
+  };
+  await runJudge({ models: ["claude-haiku", "nova-pro"], prompt: "q", effort: "low" }, ask, keepOrder);
+  // Haiku 5.5 takes effort; Nova Pro does not, so it runs without it instead of failing.
+  assert.deepEqual(calls.slice(0, 2).map((c) => c.effort), ["low", undefined]);
+  assert.equal(calls.slice(0, 2).some((c) => c.schema), false, "candidates answer in free text");
+  assert.equal(calls[2].modelId, "us.anthropic.claude-opus-5-5");
+  assert.ok(calls[2].schema, "Opus 5.5 supports structured output, so the judge call carries the schema");
+
+  // Nova Pro rejects outputConfig, so as a judge it is asked for JSON in the prompt only.
+  calls.length = 0;
+  await runJudge({ models: ["llama4", "deepseek"], prompt: "q", judge: "nova-pro" }, ask, keepOrder);
+  assert.equal(calls[2].modelId, "amazon.nova-pro-v1:0");
+  assert.equal(calls[2].schema, undefined);
 });
 
 test("a tied top score ranks the judge's winner first", async () => {
@@ -129,7 +165,7 @@ test("a failed judge call still returns the candidate answers", async () => {
   const text = formatJudgeReport(
     await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
   );
-  assert.match(text, /Judge Claude Opus 5 \(Anthropic\) failed/);
+  assert.match(text, /Judge Claude Opus 5\.5 \(Anthropic\) failed/);
   assert.match(text, /answer from amazon\.nova-pro-v1:0/);
 });
 

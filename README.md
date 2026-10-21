@@ -15,9 +15,10 @@ ask a second model for a review, run the same prompt across five models side by 
 a judge model score those answers blind, or generate an image, without leaving the chat or
 writing SDK code.
 
-At a glance: 26 text models from 7 providers, 3 image models, 1 video model and 5
+At a glance: 29 text models from 7 providers, 3 image models, 1 video model and 5
 embedding models, all defined as data in [src/data/](src/data/) and validated at startup.
-All 26 text models answered every call of the [benchmark](#benchmark) on 2026-10-18.
+The 26 text models in the 2026-10-18 [benchmark](#benchmark) answered every call; Claude
+Opus 5.5, Sonnet 5.5 and Haiku 5.5 joined the registry after that run.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/demo/judge-dark.svg">
@@ -35,9 +36,9 @@ and all three answers.
 
 | Tool | Description |
 |------|-------------|
-| `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. |
-| `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. |
-| `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. |
+| `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. `schema` returns JSON that matches a JSON schema; `effort` sets Claude's thinking depth. |
+| `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. Takes `schema` and `effort` too. |
+| `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. The verdict comes back as schema-checked JSON when the judge supports it. |
 | `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
 | `bedrock_generate_image` | Generate images from text (Stable Image Ultra, SD3.5 Large, Stable Image Core). Saves PNG locally. |
 | `bedrock_generate_video` | Start async video generation (Luma Ray 2). Output to S3. |
@@ -52,7 +53,7 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 
 | Provider | Models | Aliases |
 |----------|--------|---------|
-| Anthropic | Claude Fable 5.1, Opus 5, Sonnet 5, Haiku 4.5 (current); Fable 5, Opus 4.8 / 4.7 / 4.6, Sonnet 4.6 (previous-gen) | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
+| Anthropic | Claude Fable 5.1, Opus 5.5, Sonnet 5.5, Haiku 5.5 (current); Fable 5, Opus 5 / 4.8 / 4.7 / 4.6, Sonnet 5 / 4.6, Haiku 4.5 (previous-gen) | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
 | Meta | Llama 4 Maverick, Llama 4 Scout, Llama 3.3 70B | `llama4`, `llama4-scout`, `llama3.3` |
 | Mistral | Mistral Large 3, Devstral 2, Mistral Small, Pixtral Large | `mistral-large`, `devstral`, `mistral-small`, `pixtral` |
 | Amazon | Nova Pro, Nova 2 Lite, Nova Lite, Nova Micro | `nova-pro`, `nova2-lite`, `nova-lite`, `nova-micro` |
@@ -61,23 +62,45 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 | OpenAI | GPT-OSS 120B, GPT-OSS 20B | `gpt-oss`, `gpt-oss-20b` |
 
 Bare-tier aliases (`fable`, `claude-opus`, `claude-sonnet`, `claude-haiku`) track the
-current model in that tier; version-pinned aliases (`fable-5`, `claude-opus-4.8`,
-`claude-sonnet-4.6`) keep the previous generation reachable. As of 2026-09-06
-Anthropic's current lineup is Claude Fable 5.1, Opus 5, Sonnet 5 and Haiku 4.5, and
-its models overview lists the 4.x Opus / Sonnet entries and Fable 5 under "Legacy
-models (still available)".
+current model in that tier; version-pinned aliases (`fable-5`, `claude-opus-5`,
+`claude-sonnet-5`, `claude-haiku-4.5`, `claude-opus-4.8`, `claude-sonnet-4.6`) keep the
+previous generations reachable. AWS announced Claude Opus 5.5 on Bedrock on 2026-09-22,
+Sonnet 5.5 on 2026-09-28 and Haiku 5.5 on 2026-10-07, so the bare `claude-opus`,
+`claude-sonnet` and `claude-haiku` now resolve to the 5.5 models.
 
 `temperature` is the one thing that differs across those entries. Anthropic deprecated
 `temperature` / `top_p` / `top_k` for Claude Opus 4.7 and later, where a non-default
 value returns a 400, so `text-models.json` marks those entries `noTemperature` and this
 server omits the parameter for them - the `temperature` argument is accepted but has no
-effect. Claude Haiku 4.5, Opus 4.6 and Sonnet 4.6 still honor it, so pin
-`claude-sonnet-4.6` or use `claude-haiku` if you need to set it.
+effect. The three 5.5 models return the same 400 (probed 2026-10-21). Claude Haiku
+4.5, Opus 4.6 and Sonnet 4.6 still honor it, so pin `claude-sonnet-4.6` or
+`claude-haiku-4.5` if you need to set it.
 
 The `maxTokens` value in `text-models.json` is the default output cap **this server**
 sends when a call omits `max_tokens` - deliberately below the model's own ceiling
-(Anthropic documents 128K max output for Fable 5.1, Opus 5 and Sonnet 5, 64K for
+(Anthropic documents 128K max output for Fable 5.1 and the 5.5 and 5 models, 64K for
 Haiku 4.5). Pass `max_tokens` to go higher on a single call.
+
+#### Structured output and effort
+
+`schema` on `bedrock_ask` and `bedrock_compare` sends a JSON schema as Converse
+`outputConfig.textFormat`, so the reply is JSON that matches it, shown pretty-printed.
+Object schemas need `"additionalProperties": false`; Bedrock rejects numeric and string
+length constraints (`minimum`, `maxLength` and the like) with a 400. Probed on every
+registry model on 2026-10-21: all 12 Claude models, Mistral Large 3, Devstral 2, both
+Qwen3 models, DeepSeek V3.2 and both GPT-OSS models accept it (`structured_output` in
+`bedrock_list_models`). Nova, Llama, Mistral Small, Pixtral and DeepSeek R1 answer
+"This model doesn't support the outputConfig field", so this server refuses the call
+before it is billed. GPT-OSS puts a stray character before its JSON (`B{...}`); the
+reply parser skips anything before the first brace.
+
+`effort` (`low`, `medium`, `high`, `xhigh`, `max`) sets Claude's thinking depth and
+token spend through Converse `outputConfig.effort`. Every Claude model except Haiku 4.5
+takes it. Opus 5.5 and Haiku 5.5 default to `medium`, the others to `high`. On
+2026-10-21, "How many primes are below 100?" cost Haiku 5.5 3 output tokens at `low`
+and 60 at `max`, with the same answer. `bedrock_ask` rejects `effort` for a model that
+does not take it; `bedrock_compare` and `bedrock_judge` apply it only to the candidates
+that do, so one value can tune the Claude answers in a mixed list.
 
 ### Image (InvokeModel API)
 
@@ -220,6 +243,12 @@ The server supports two auth methods:
 "Use bedrock_ask to ask llama4 to explain Docker in 3 sentences"
 ```
 
+### Get JSON that matches a schema
+
+```
+"Use bedrock_ask with claude-haiku, effort low, and a schema with category, subcategory and amount_inr: Swiggy order, Mattar Paneer Meal, 203 rupees"
+```
+
 ### Compare models
 
 ```
@@ -241,7 +270,9 @@ and, for the Claude models, [Anthropic pricing](https://platform.claude.com/docs
 The candidates answer in parallel. The judge (default `claude-opus`, override with
 `judge`) then sees the answers shuffled and labeled A, B, C with the model names
 removed, scores each from 1 to 10, and names a winner. The tool maps the labels back
-to models and returns a ranked table, the judge's reasoning, and every answer. Pass
+to models and returns a ranked table, the judge's reasoning, and every answer. When the
+judge supports structured output (the default Opus 5.5 does), the verdict is requested
+against a schema whose `winner` can only be one of the labels, so it always parses. Pass
 `criteria` to change what is scored and `synthesize: true` to also get one merged
 answer. A candidate that fails is listed under **Failed** and the rest are still
 judged; if the judge call fails, the answers still come back. Billing is one
@@ -335,6 +366,7 @@ Model definitions are data, kept in `src/data/*.json` and validated against Zod 
 | Converse API for every text model | One request and response shape across all seven providers, so adding a text model is a JSON entry, not a new code path. |
 | Model catalog as JSON + Zod | A malformed or half-edited registry fails at startup, not on the first call. Capabilities are a closed enum, so a typo like `tool-use` is rejected at load. |
 | Per-model `noTemperature` flag | Claude Opus 4.7 and later return a 400 for a non-default `temperature`; the flag drops the parameter for exactly those entries. |
+| Measured `effort` and `structured_output` flags | Each was probed live on every registry model, so an unsupported option fails with the list of models that take it, before a billed call. Ids outside the registry pass through for Bedrock to judge. |
 | Cached SDK client per region | Text and embeddings run in `AWS_REGION`, while the Stability and Luma models are only served from us-west-2. |
 | `Promise.allSettled` in `bedrock_compare` | One model without access, or one throttled call, reports its own error while the rest still answer. |
 | Blind, shuffled answers in `bedrock_judge` | LLM judges favor answers by position and by name. The judge sees only labels in a random order, and the tool maps them back to models afterwards. |
@@ -402,6 +434,8 @@ node scripts/call-tool.mjs bedrock_ask '{"model":"nova-micro","prompt":"Say hi"}
 |-------|-------|-----|
 | `The provided model identifier is invalid.` | The ID does not resolve on Bedrock - usually a missing `us.` cross-region inference profile prefix, or a model that is not offered in your region. | Use a registry alias (`bedrock_list_models`), or add the `us.` prefix to the full ID. |
 | `` `temperature` is deprecated for this model. `` | A Claude 4.7-or-later model was reached without a registry entry, so the server sent its default `temperature` of 0.7. Anthropic deprecated `temperature` / `top_p` / `top_k` for Claude Opus 4.7 and later, and a non-default value returns a 400 there. Earlier models (Haiku 4.5, Opus 4.6, Sonnet 4.6) still accept it. | Call it through a registered alias, or add a registry entry with `"noTemperature": true` in `src/data/text-models.json`. |
+| `<model> does not support structured output` / `does not take effort` | This server's registry says the model rejects that option (measured 2026-10-21). | Pick a model from the list in the message, or drop `schema` / `effort`. |
+| `This model doesn't support the outputConfig field.` | A model outside the registry rejected `schema` or `effort`. | Drop the option for that model. |
 | `AccessDeniedException` | Model access has not been granted to your account. | AWS Console > Bedrock > Model access, request the model, retry once it shows Access granted. |
 | `bedrock_video_status` reports `Failed` | Bedrock returns the reason on the job itself. | Read the `Reason:` line printed under the status and fix what it names. |
 
