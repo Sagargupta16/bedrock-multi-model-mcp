@@ -38,7 +38,7 @@ npm run test     # builds, then node --test dist/**/*.test.js
 npm run lint     # tsc --noEmit
 ```
 
-- Suites: `src/models.test.ts` (registries, server.json/package.json sync), `src/judge.test.ts` (bedrock_judge with an injected fake converse), `src/bedrock/client.test.ts` (bearer fallback rules). Tests run against compiled `dist/`, so build first (`npm run test` handles it).
+- Suites: `src/models.test.ts` (registries, measured `effort` / `structured_output` flags, server.json/package.json sync), `src/judge.test.ts` (bedrock_judge with an injected fake converse), `src/bedrock/converse.test.ts` (request building: outputConfig, option rejection, JSON reply parsing), `src/bedrock/client.test.ts` (bearer fallback rules). Tests run against compiled `dist/`, so build first (`npm run test` handles it).
 - `npm run benchmark` makes live, billed Bedrock calls; `node scripts/benchmark.mjs --from docs/benchmark/results.json` only re-renders the table.
 
 ## Entry points
@@ -63,6 +63,7 @@ npm run lint     # tsc --noEmit
 - Version lives in three places: `package.json`, and `version` + `packages[0].version` in `server.json`. A test fails on skew.
 - Regions split: text defaults to `AWS_REGION` (us-east-1); image (Stability) and video (Luma Ray 2) models live in us-west-2, and the video output S3 bucket must also be in us-west-2.
 - Many foundation models require the `us.` cross-region inference profile prefix for on-demand invocation -- registries store the verified-working form per model. Keep only ACTIVE models (EOL entries like Nova Reel were purged).
+- Structured output and effort both ride on Converse `outputConfig` (`textFormat` takes the schema as a JSON **string**; `effort` is a plain field). Registry flags `structured_output` and `effort` were measured per model on 2026-10-21; `buildConverseInput` rejects an unsupported option before the call, `effortFor` drops effort per model in compare/judge. GPT-OSS prefixes its JSON with a stray `B`, handled in `parseJsonReply`.
 - Generated images land in `BEDROCK_MCP_OUTPUT_DIR`, falling back to cwd then `~/bedrock-images`.
 - CI is `.github/workflows/ci.yml`: `npm ci --ignore-scripts` + `npm run lint` + `npm test` on push to `main` and on every PR, across a Node matrix (22, 24 and 26). Renovate is enabled via `renovate.json`.
 
@@ -76,9 +77,9 @@ npm run lint     # tsc --noEmit
 
 ## Usage                (CLI / tool)
 
-- `bedrock_ask` -- prompt one text model (alias or full model ID).
-- `bedrock_compare` -- same prompt to 2-5 models side by side.
-- `bedrock_judge` -- 2-5 models answer, a judge model (default claude-opus) scores them blind and picks a winner.
+- `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for Claude thinking depth.
+- `bedrock_compare` -- same prompt to 2-5 models side by side; takes `schema` and `effort`.
+- `bedrock_judge` -- 2-5 models answer, a judge model (default claude-opus, Opus 5.5) scores them blind and picks a winner; the verdict uses structured output when the judge supports it.
 - `bedrock_generate_image` / `bedrock_generate_video` + `bedrock_video_status` -- media generation.
 - `bedrock_embed_similarity` -- cosine-similarity matrix across 2+ texts.
 

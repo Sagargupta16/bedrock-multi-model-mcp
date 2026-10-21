@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-10-21
+
+### Added
+
+- Claude Opus 5.5 (`us.anthropic.claude-opus-5-5`), Sonnet 5.5 (`us.anthropic.claude-sonnet-5-5`) and Haiku 5.5 (`us.anthropic.claude-haiku-5-5`) in the text registry, each flagged `noTemperature` (all three returned "`temperature` is deprecated for this model" when probed on 2026-10-21) with pinned aliases `opus-5.5`, `sonnet-5.5`, `haiku-5.5` and their `claude-` forms.
+- `schema` on `bedrock_ask` and `bedrock_compare`: a JSON schema sent as Converse `outputConfig.textFormat`, so the reply is JSON that matches it, printed as a JSON block. A new `structured_output` capability marks the 19 models that accepted it in a live probe of every registry model on 2026-10-21 (all 12 Claude, Mistral Large 3, Devstral 2, Qwen3 Coder Next, Qwen3 VL, DeepSeek V3.2, GPT-OSS 120B and 20B). The other 10 (Nova, Llama, Mistral Small, Pixtral, DeepSeek R1) are refused before the call with the list of models that do support it.
+- `effort` on `bedrock_ask`, `bedrock_compare` and `bedrock_judge` (`low` to `max`), sent as Converse `outputConfig.effort`. The new registry flag `effort` marks every Claude model except Haiku 4.5, which rejected it. Measured on Haiku 5.5: 3 output tokens at `low` and 60 at `max` for the same one-line answer. `bedrock_ask` rejects it for other models; compare and judge apply it only to the candidates that take it. `bedrock_list_models` shows `effort` in the Capabilities column.
+- `bedrock_judge` asks a structured-output judge for its verdict against a schema whose `winner` is limited to the answer labels and whose `scores` require every label, so the verdict always parses. Judges without the capability keep the prompt-only JSON request.
+- `src/bedrock/converse.test.ts`: 7 tests for request building (`buildConverseInput`), per-model effort (`effortFor`) and the JSON reply parser. 50 tests in all, up from 39.
+
+### Changed
+
+- **Breaking:** bare `claude-opus`, `claude-sonnet` and `claude-haiku` now resolve to the 5.5 models, and so does the default judge. `claude-haiku` used to reach Haiku 4.5, which honours `temperature`; the 5.5 models do not, so pin `claude-haiku-4.5` to keep setting it. `claude-opus-5`, `claude-sonnet-5` and `claude-haiku-4.5` keep the previous models reachable.
+
+### Fixed
+
+- GPT-OSS on Bedrock returns schema-constrained JSON with a stray leading character (`B{"city":...}`, seen 2026-10-21). `parseJsonReply` retries from the first brace, so the JSON still prints.
+
 ## [0.5.0] - 2026-10-18
 
 ### Added

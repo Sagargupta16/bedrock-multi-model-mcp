@@ -4,12 +4,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { converse } from "./bedrock/converse.js";
+import { converse, effortFor, type ConverseResult } from "./bedrock/converse.js";
 import { generateImage, IMAGE_MODELS, getImageModel } from "./bedrock/image.js";
 import { startVideoGeneration, getVideoStatus, VIDEO_MODELS } from "./bedrock/video.js";
 import { embed, cosineSimilarity, EMBEDDING_MODELS, getEmbeddingModel } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
 import { runJudge, formatJudgeReport } from "./judge.js";
+import { EFFORT_LEVELS } from "./types.js";
 
 // Read the version from package.json (one directory above the compiled
 // dist/index.js) so the version reported to MCP clients cannot drift from the
@@ -23,6 +24,24 @@ const server = new McpServer({
   version,
 });
 
+const effortParam = z.enum(EFFORT_LEVELS).optional().describe(
+  "Thinking depth and token spend for models that take it (Claude except Haiku 4.5): low, medium, high, xhigh, max. " +
+  "Opus 5.5 and Haiku 5.5 default to medium, the others to high. bedrock_ask rejects it for other models; " +
+  "bedrock_compare and bedrock_judge apply it only to the models that take it."
+);
+const schemaParam = z.record(z.string(), z.unknown()).optional().describe(
+  "JSON schema the reply must match (structured output). Object schemas need additionalProperties: false. " +
+  "Supported by Claude, Mistral Large 3, Devstral 2, Qwen3, DeepSeek V3.2 and GPT-OSS; not by Nova, Llama, " +
+  "Mistral Small, Pixtral or DeepSeek R1."
+);
+
+// A schema reply is shown as pretty JSON; when it did not parse, the raw text follows a note.
+function replyBody(result: ConverseResult, schemaSent: boolean): string {
+  if (!schemaSent) return result.text;
+  if (result.json === undefined) return `*Reply was not valid JSON (stop: ${result.stopReason}):*\n\n${result.text}`;
+  return "```json\n" + JSON.stringify(result.json, null, 2) + "\n```";
+}
+
 // --- Tool: bedrock_ask ---
 // Send a prompt to any Bedrock model and get a response.
 server.registerTool(
@@ -31,7 +50,8 @@ server.registerTool(
     description:
       "Send a prompt to any AWS Bedrock model via the Converse API. " +
       "Supports Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS, and more. " +
-      "Use short aliases (e.g. 'llama4', 'nova-pro') or full model IDs.",
+      "Use short aliases (e.g. 'llama4', 'nova-pro') or full model IDs. " +
+      "Pass schema to get JSON that matches it, and effort to set Claude's thinking depth.",
     inputSchema: {
       model: z.string().describe(
         "Model alias (e.g. 'claude-opus', 'llama4', 'mistral-large', 'nova-pro', 'deepseek') or full Bedrock model ID"
@@ -40,10 +60,12 @@ server.registerTool(
       system: z.string().optional().describe("Optional system prompt"),
       temperature: z.number().min(0).max(1).optional().describe("Sampling temperature (0-1, default 0.7). Ignored by models that don't support it."),
       max_tokens: z.number().positive().optional().describe("Maximum tokens to generate"),
+      effort: effortParam,
+      schema: schemaParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ model, prompt, system, temperature, max_tokens }) => {
+  async ({ model, prompt, system, temperature, max_tokens, effort, schema }) => {
     try {
       const result = await converse({
         modelId: model,
@@ -51,6 +73,8 @@ server.registerTool(
         system,
         temperature,
         maxTokens: max_tokens,
+        effort,
+        schema,
       });
 
       const info = getModelInfo(result.modelId);
@@ -59,9 +83,9 @@ server.registerTool(
       const header = `**${modelLabel}**\n` +
         `Tokens: ${result.inputTokens} in / ${result.outputTokens} out | ` +
         `Latency: ${(result.latencyMs / 1000).toFixed(1)}s | ` +
-        `Stop: ${result.stopReason}\n\n---\n\n`;
+        `Stop: ${result.stopReason}${effort ? ` | Effort: ${effort}` : ""}\n\n---\n\n`;
 
-      return { content: [{ type: "text" as const, text: header + result.text }] };
+      return { content: [{ type: "text" as const, text: header + replyBody(result, !!schema) }] };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
@@ -85,13 +109,23 @@ server.registerTool(
       system: z.string().optional().describe("Optional system prompt sent to all models"),
       temperature: z.number().min(0).max(1).optional().describe("Sampling temperature for all models"),
       max_tokens: z.number().positive().optional().describe("Maximum tokens per model response"),
+      effort: effortParam,
+      schema: schemaParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ models, prompt, system, temperature, max_tokens }) => {
+  async ({ models, prompt, system, temperature, max_tokens, effort, schema }) => {
     const results = await Promise.allSettled(
       models.map((m) =>
-        converse({ modelId: m, prompt, system, temperature, maxTokens: max_tokens })
+        converse({
+          modelId: m,
+          prompt,
+          system,
+          temperature,
+          maxTokens: max_tokens,
+          effort: effortFor(m, effort),
+          schema,
+        })
       )
     );
 
@@ -104,11 +138,12 @@ server.registerTool(
 
       if (result.status === "fulfilled") {
         const r = result.value;
+        const applied = effortFor(models[i], effort);
         sections.push(
           `## ${label}\n` +
           `*Tokens: ${r.inputTokens} in / ${r.outputTokens} out | ` +
-          `Latency: ${(r.latencyMs / 1000).toFixed(1)}s*\n\n` +
-          r.text
+          `Latency: ${(r.latencyMs / 1000).toFixed(1)}s${applied ? ` | Effort: ${applied}` : ""}*\n\n` +
+          replyBody(r, !!schema)
         );
       } else {
         const errMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
@@ -142,10 +177,11 @@ server.registerTool(
       system: z.string().optional().describe("Optional system prompt sent to the candidates"),
       temperature: z.number().min(0).max(1).optional().describe("Sampling temperature for the candidates"),
       max_tokens: z.number().positive().optional().describe("Maximum tokens per candidate response"),
+      effort: effortParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ models, prompt, judge, criteria, synthesize, system, temperature, max_tokens }) => {
+  async ({ models, prompt, judge, criteria, synthesize, system, temperature, max_tokens, effort }) => {
     try {
       const report = await runJudge({
         models,
@@ -156,6 +192,7 @@ server.registerTool(
         system,
         temperature,
         maxTokens: max_tokens,
+        effort,
       });
       return { content: [{ type: "text" as const, text: formatJudgeReport(report) }] };
     } catch (err) {
@@ -200,7 +237,8 @@ server.registerTool(
       "| --- | --- | --- | --- | --- |",
     ];
     for (const m of entries) {
-      lines.push(`| ${m.name} | ${m.provider} | ${m.useCase} | ${m.aliases.join(", ")} | ${m.capabilities.join(", ")} |`);
+      const caps = m.effort ? [...m.capabilities, "effort"] : m.capabilities;
+      lines.push(`| ${m.name} | ${m.provider} | ${m.useCase} | ${m.aliases.join(", ")} | ${caps.join(", ")} |`);
     }
 
     return { content: [{ type: "text" as const, text: lines.join("\n") }] };

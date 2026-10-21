@@ -36,8 +36,8 @@ test("aliases are unique across all models", () => {
 });
 
 test("resolveModelId maps alias to id, passes through full ids", () => {
-  assert.equal(resolveModelId("claude-sonnet"), "us.anthropic.claude-sonnet-5");
-  assert.equal(resolveModelId("CLAUDE-SONNET"), "us.anthropic.claude-sonnet-5");
+  assert.equal(resolveModelId("claude-sonnet"), "us.anthropic.claude-sonnet-5-5");
+  assert.equal(resolveModelId("CLAUDE-SONNET"), "us.anthropic.claude-sonnet-5-5");
   assert.equal(resolveModelId("some.unknown.model-id"), "some.unknown.model-id");
 });
 
@@ -47,10 +47,12 @@ test("getModelInfo returns metadata for known ids", () => {
   assert.equal(info?.noTemperature, true);
 });
 
-test("claude-opus alias points at Opus 5, not a pinned older snapshot", () => {
-  // Bare-tier aliases track the current flagship; version-pinned aliases
-  // (claude-opus-4.8) stay put so an older model is still reachable.
-  assert.equal(resolveModelId("claude-opus"), "us.anthropic.claude-opus-5");
+test("bare-tier Claude aliases point at the 5.5 generation", () => {
+  // Bare-tier aliases track the current model in each tier; version-pinned
+  // aliases (claude-opus-5, claude-opus-4.8) stay put so older models stay reachable.
+  assert.equal(resolveModelId("claude-opus"), "us.anthropic.claude-opus-5-5");
+  assert.equal(resolveModelId("claude-haiku"), "us.anthropic.claude-haiku-5-5");
+  assert.equal(resolveModelId("claude-opus-5"), "us.anthropic.claude-opus-5");
   assert.equal(resolveModelId("claude-opus-4.8"), "us.anthropic.claude-opus-4-8");
 });
 
@@ -60,6 +62,43 @@ test("version-pinned aliases keep the previous generation reachable", () => {
   // aliases move on and these pinned ones must not.
   assert.equal(resolveModelId("claude-sonnet-4.6"), "us.anthropic.claude-sonnet-4-6");
   assert.equal(resolveModelId("fable-5"), "us.anthropic.claude-fable-5");
+  assert.equal(resolveModelId("claude-sonnet-5"), "us.anthropic.claude-sonnet-5");
+  assert.equal(resolveModelId("claude-haiku-4.5"), "us.anthropic.claude-haiku-4-5-20251001-v1:0");
+});
+
+test("effort is flagged on every Claude model except Haiku 4.5", () => {
+  // Probed live 2026-10-21 with Converse outputConfig.effort: every Claude entry
+  // answered, Haiku 4.5 returned "This model doesn't support the effort field".
+  for (const m of TEXT_MODELS.filter((x) => x.provider === "Anthropic")) {
+    const expected = m.id !== "us.anthropic.claude-haiku-4-5-20251001-v1:0";
+    assert.equal(!!m.effort, expected, `${m.id} effort flag`);
+  }
+  assert.ok(TEXT_MODELS.filter((x) => x.provider !== "Anthropic").every((m) => !m.effort));
+});
+
+test("structured_output is flagged exactly on the models that accepted it live", () => {
+  // Probed 2026-10-21: Converse outputConfig.textFormat with a 3-field schema on
+  // every registry model. These rejected it with "This model doesn't support the
+  // outputConfig field"; every other model returned schema-shaped JSON.
+  const rejected = new Set([
+    "us.meta.llama4-maverick-17b-instruct-v1:0",
+    "us.meta.llama4-scout-17b-instruct-v1:0",
+    "us.meta.llama3-3-70b-instruct-v1:0",
+    "mistral.mistral-small-2402-v1:0",
+    "us.mistral.pixtral-large-2502-v1:0",
+    "us.deepseek.r1-v1:0",
+    "amazon.nova-pro-v1:0",
+    "us.amazon.nova-2-lite-v1:0",
+    "amazon.nova-lite-v1:0",
+    "amazon.nova-micro-v1:0",
+  ]);
+  for (const m of TEXT_MODELS) {
+    assert.equal(
+      m.capabilities.includes("structured_output"),
+      !rejected.has(m.id),
+      `${m.id} structured_output flag`,
+    );
+  }
 });
 
 test("noTemperature is set exactly on the Claude 4.7-and-later entries", () => {
@@ -69,8 +108,12 @@ test("noTemperature is set exactly on the Claude 4.7-and-later entries", () => {
   // still accept temperature - probed live 2026-09-06 through this server,
   // which injects 0.7 for any entry without the flag: Haiku 4.5, Opus 4.6 and
   // Sonnet 4.6 all returned normal completions. So the flag must be set on the
-  // newer entries and stay off the older ones.
+  // newer entries and stay off the older ones. The three 5.5 models returned
+  // "`temperature` is deprecated for this model" when probed live 2026-10-21.
   for (const id of [
+    "us.anthropic.claude-opus-5-5",
+    "us.anthropic.claude-sonnet-5-5",
+    "us.anthropic.claude-haiku-5-5",
     "us.anthropic.claude-fable-5-1",
     "us.anthropic.claude-fable-5",
     "us.anthropic.claude-opus-5",

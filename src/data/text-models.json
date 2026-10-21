@@ -15,10 +15,12 @@
       "vision",
       "tool_use",
       "streaming",
-      "reasoning"
+      "reasoning",
+      "structured_output"
     ],
     "maxTokens": 64000,
-    "noTemperature": true
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-fable-5",
@@ -33,18 +35,41 @@
       "vision",
       "tool_use",
       "streaming",
-      "reasoning"
+      "reasoning",
+      "structured_output"
     ],
     "maxTokens": 64000,
-    "noTemperature": true
+    "noTemperature": true,
+    "effort": true
+  },
+  {
+    "id": "us.anthropic.claude-opus-5-5",
+    "name": "Claude Opus 5.5",
+    "provider": "Anthropic",
+    "useCase": "Recommended starting point, 1M context, thinking always on (effort defaults to medium)",
+    "aliases": [
+      "claude-opus",
+      "opus-5.5",
+      "claude-opus-5.5"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 32768,
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-opus-5",
     "name": "Claude Opus 5",
     "provider": "Anthropic",
-    "useCase": "Recommended starting point, 1M context, adaptive thinking on by default",
+    "useCase": "Previous-gen Opus, 1M context",
     "aliases": [
-      "claude-opus",
       "opus-5",
       "claude-opus-5"
     ],
@@ -53,10 +78,12 @@
       "vision",
       "tool_use",
       "streaming",
-      "reasoning"
+      "reasoning",
+      "structured_output"
     ],
     "maxTokens": 32768,
-    "noTemperature": true
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-opus-4-8",
@@ -70,10 +97,12 @@
       "text",
       "vision",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 32768,
-    "noTemperature": true
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-opus-4-7",
@@ -87,10 +116,12 @@
       "text",
       "vision",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 32768,
-    "noTemperature": true
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-opus-4-6-v1",
@@ -104,17 +135,40 @@
       "text",
       "vision",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
-    "maxTokens": 32768
+    "maxTokens": 32768,
+    "effort": true
+  },
+  {
+    "id": "us.anthropic.claude-sonnet-5-5",
+    "name": "Claude Sonnet 5.5",
+    "provider": "Anthropic",
+    "useCase": "Best combination of speed and intelligence, 1M context",
+    "aliases": [
+      "claude-sonnet",
+      "sonnet-5.5",
+      "claude-sonnet-5.5"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 32768,
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-sonnet-5",
     "name": "Claude Sonnet 5",
     "provider": "Anthropic",
-    "useCase": "Best combination of speed and intelligence, 1M context",
+    "useCase": "Previous-gen balanced, 1M context",
     "aliases": [
-      "claude-sonnet",
       "claude-sonnet-5"
     ],
     "capabilities": [
@@ -122,10 +176,12 @@
       "vision",
       "tool_use",
       "streaming",
-      "reasoning"
+      "reasoning",
+      "structured_output"
     ],
     "maxTokens": 32768,
-    "noTemperature": true
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-sonnet-4-6",
@@ -139,24 +195,48 @@
       "text",
       "vision",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
-    "maxTokens": 16384
+    "maxTokens": 16384,
+    "effort": true
+  },
+  {
+    "id": "us.anthropic.claude-haiku-5-5",
+    "name": "Claude Haiku 5.5",
+    "provider": "Anthropic",
+    "useCase": "Fast and cheap, the first Haiku with effort control",
+    "aliases": [
+      "claude-haiku",
+      "haiku-5.5",
+      "claude-haiku-5.5"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 32768,
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
     "name": "Claude Haiku 4.5",
     "provider": "Anthropic",
-    "useCase": "Fast and cheap",
+    "useCase": "Previous-gen fast and cheap; still takes temperature",
     "aliases": [
-      "claude-haiku",
       "claude-haiku-4.5"
     ],
     "capabilities": [
       "text",
       "vision",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -218,7 +298,8 @@
     "capabilities": [
       "text",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -233,7 +314,8 @@
     "capabilities": [
       "text",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -278,7 +360,8 @@
     "capabilities": [
       "text",
       "tool_use",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -293,7 +376,8 @@
     "capabilities": [
       "text",
       "vision",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -308,7 +392,8 @@
     ],
     "capabilities": [
       "text",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -398,7 +483,8 @@
     ],
     "capabilities": [
       "text",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -412,7 +498,8 @@
     ],
     "capabilities": [
       "text",
-      "streaming"
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   }

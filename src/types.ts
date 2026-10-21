@@ -11,7 +11,13 @@ export const CAPABILITIES = [
   "tool_use",
   "streaming",
   "reasoning",
+  // Accepts Converse outputConfig.textFormat (JSON schema output). Measured per
+  // model: Nova, Llama, Mistral Small, Pixtral and DeepSeek R1 reject the field.
+  "structured_output",
 ] as const;
+
+export const EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"] as const;
+export type EffortLevel = (typeof EFFORT_LEVELS)[number];
 
 export const TextModelSchema = z.object({
   id: z.string(),
@@ -24,6 +30,9 @@ export const TextModelSchema = z.object({
   // deliberately below the model's documented ceiling; override per call.
   maxTokens: z.number().positive(),
   noTemperature: z.boolean().optional(),
+  // Accepts Converse outputConfig.effort. Claude Haiku 4.5 rejects it
+  // ("This model doesn't support the effort field").
+  effort: z.boolean().optional(),
 });
 
 export const ImageModelSchema = z.object({
