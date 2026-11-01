@@ -86,44 +86,6 @@
     "effort": true
   },
   {
-    "id": "us.anthropic.claude-opus-4-8",
-    "name": "Claude Opus 4.8",
-    "provider": "Anthropic",
-    "useCase": "Previous-gen Opus reasoning",
-    "aliases": [
-      "claude-opus-4.8"
-    ],
-    "capabilities": [
-      "text",
-      "vision",
-      "tool_use",
-      "streaming",
-      "structured_output"
-    ],
-    "maxTokens": 32768,
-    "noTemperature": true,
-    "effort": true
-  },
-  {
-    "id": "us.anthropic.claude-opus-4-7",
-    "name": "Claude Opus 4.7",
-    "provider": "Anthropic",
-    "useCase": "Previous-gen Opus reasoning",
-    "aliases": [
-      "claude-opus-4.7"
-    ],
-    "capabilities": [
-      "text",
-      "vision",
-      "tool_use",
-      "streaming",
-      "structured_output"
-    ],
-    "maxTokens": 32768,
-    "noTemperature": true,
-    "effort": true
-  },
-  {
     "id": "us.anthropic.claude-opus-4-6-v1",
     "name": "Claude Opus 4.6",
     "provider": "Anthropic",
@@ -241,52 +203,6 @@
     "maxTokens": 8192
   },
   {
-    "id": "us.meta.llama4-maverick-17b-instruct-v1:0",
-    "name": "Llama 4 Maverick 17B",
-    "provider": "Meta",
-    "useCase": "Open multimodal",
-    "aliases": [
-      "llama4",
-      "llama4-maverick"
-    ],
-    "capabilities": [
-      "text",
-      "vision",
-      "streaming"
-    ],
-    "maxTokens": 8192
-  },
-  {
-    "id": "us.meta.llama4-scout-17b-instruct-v1:0",
-    "name": "Llama 4 Scout 17B",
-    "provider": "Meta",
-    "useCase": "Open multimodal",
-    "aliases": [
-      "llama4-scout"
-    ],
-    "capabilities": [
-      "text",
-      "vision",
-      "streaming"
-    ],
-    "maxTokens": 8192
-  },
-  {
-    "id": "us.meta.llama3-3-70b-instruct-v1:0",
-    "name": "Llama 3.3 70B Instruct",
-    "provider": "Meta",
-    "useCase": "Open general",
-    "aliases": [
-      "llama3.3"
-    ],
-    "capabilities": [
-      "text",
-      "tool_use",
-      "streaming"
-    ],
-    "maxTokens": 8192
-  },
-  {
     "id": "mistral.mistral-large-3-675b-instruct",
     "name": "Mistral Large 3 (675B)",
     "provider": "Mistral",
@@ -304,36 +220,6 @@
     "maxTokens": 8192
   },
   {
-    "id": "mistral.devstral-2-123b",
-    "name": "Devstral 2 (123B)",
-    "provider": "Mistral",
-    "useCase": "Coding",
-    "aliases": [
-      "devstral"
-    ],
-    "capabilities": [
-      "text",
-      "tool_use",
-      "streaming",
-      "structured_output"
-    ],
-    "maxTokens": 8192
-  },
-  {
-    "id": "mistral.mistral-small-2402-v1:0",
-    "name": "Mistral Small",
-    "provider": "Mistral",
-    "useCase": "Fast and cheap",
-    "aliases": [
-      "mistral-small"
-    ],
-    "capabilities": [
-      "text",
-      "streaming"
-    ],
-    "maxTokens": 8192
-  },
-  {
     "id": "us.mistral.pixtral-large-2502-v1:0",
     "name": "Pixtral Large",
     "provider": "Mistral",
@@ -347,6 +233,42 @@
       "streaming"
     ],
     "maxTokens": 8192
+  },
+  {
+    "id": "mistral.ministral-3-14b-instruct",
+    "name": "Ministral 3 14B",
+    "provider": "Mistral",
+    "useCase": "Fast and cheap, with vision",
+    "aliases": [
+      "ministral",
+      "ministral-3"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "structured_output"
+    ],
+    "maxTokens": 8192
+  },
+  {
+    "id": "mistral.magistral-small-2509",
+    "name": "Magistral Small",
+    "provider": "Mistral",
+    "useCase": "Reasoning, with vision",
+    "aliases": [
+      "magistral",
+      "magistral-small"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning"
+    ],
+    "maxTokens": 16384
   },
   {
     "id": "qwen.qwen3-coder-next",
@@ -382,6 +304,23 @@
     "maxTokens": 8192
   },
   {
+    "id": "qwen.qwen3-next-80b-a3b",
+    "name": "Qwen3 Next 80B A3B",
+    "provider": "Qwen",
+    "useCase": "Fast general, 256K context",
+    "aliases": [
+      "qwen-next",
+      "qwen3-next"
+    ],
+    "capabilities": [
+      "text",
+      "tool_use",
+      "streaming",
+      "structured_output"
+    ],
+    "maxTokens": 8192
+  },
+  {
     "id": "deepseek.v3.2",
     "name": "DeepSeek V3.2",
     "provider": "DeepSeek",
@@ -398,16 +337,78 @@
     "maxTokens": 8192
   },
   {
-    "id": "us.deepseek.r1-v1:0",
-    "name": "DeepSeek R1",
-    "provider": "DeepSeek",
-    "useCase": "Reasoning",
+    "id": "us.xai.grok-4.7",
+    "name": "Grok 4.7",
+    "provider": "xAI",
+    "useCase": "Frontier model for coding, agents and knowledge work",
     "aliases": [
-      "deepseek-r1"
+      "grok",
+      "grok-4.7"
     ],
     "capabilities": [
       "text",
-      "streaming"
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 16384,
+    "noTemperature": true,
+    "effort": true
+  },
+  {
+    "id": "us.moonshotai.kimi-k3",
+    "name": "Kimi K3",
+    "provider": "Moonshot AI",
+    "useCase": "Long-context coding and agentic work, reasons by default",
+    "aliases": [
+      "kimi",
+      "kimi-k3"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 16384,
+    "noTemperature": true,
+    "effort": true
+  },
+  {
+    "id": "minimax.minimax-m2.5",
+    "name": "MiniMax M2.5",
+    "provider": "MiniMax",
+    "useCase": "Open-weight coding and agents, 196K context",
+    "aliases": [
+      "minimax",
+      "minimax-m2.5"
+    ],
+    "capabilities": [
+      "text",
+      "tool_use",
+      "streaming",
+      "structured_output"
+    ],
+    "maxTokens": 8192
+  },
+  {
+    "id": "nvidia.nemotron-super-3-120b",
+    "name": "Nemotron 3 Super 120B",
+    "provider": "NVIDIA",
+    "useCase": "Open-weight long-context agents",
+    "aliases": [
+      "nemotron",
+      "nemotron-super"
+    ],
+    "capabilities": [
+      "text",
+      "tool_use",
+      "streaming",
+      "structured_output"
     ],
     "maxTokens": 8192
   },
@@ -471,6 +472,46 @@
       "streaming"
     ],
     "maxTokens": 5120
+  },
+  {
+    "id": "us.openai.gpt-6.1-sol",
+    "name": "GPT-6.1 Sol",
+    "provider": "OpenAI",
+    "useCase": "Newest GPT for agents that work through codebases and documents, 1M context",
+    "aliases": [
+      "gpt-sol",
+      "gpt-6.1-sol"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 16384,
+    "noTemperature": true,
+    "effort": true
+  },
+  {
+    "id": "us.openai.gpt-6.1-terra",
+    "name": "GPT-6.1 Terra",
+    "provider": "OpenAI",
+    "useCase": "Visual reasoning and computer use, 1M context",
+    "aliases": [
+      "gpt-terra",
+      "gpt-6.1-terra"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 16384,
+    "noTemperature": true,
+    "effort": true
   },
   {
     "id": "openai.gpt-oss-120b-1:0",

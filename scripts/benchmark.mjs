@@ -3,7 +3,7 @@
 //
 //   npm run build
 //   node scripts/benchmark.mjs                     # all models, 3 runs per prompt
-//   node scripts/benchmark.mjs --runs 1 --models nova-micro,llama4
+//   node scripts/benchmark.mjs --runs 1 --models nova-micro,kimi
 //   node scripts/benchmark.mjs --from docs/benchmark/results.json   # re-render only, no calls
 //
 // Each model gets the same fixed prompts, with temperature 0 where the model

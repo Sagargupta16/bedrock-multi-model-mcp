@@ -4,23 +4,20 @@
     "name": "Stable Image Ultra",
     "provider": "Stability AI",
     "aliases": ["stable-ultra"],
-    "region": "us-west-2",
-    "format": "stability"
+    "region": "us-west-2"
   },
   {
     "id": "stability.sd3-5-large-v1:0",
     "name": "Stable Diffusion 3.5 Large",
     "provider": "Stability AI",
     "aliases": ["sd3.5", "sd3-5-large"],
-    "region": "us-west-2",
-    "format": "stability"
+    "region": "us-west-2"
   },
   {
     "id": "stability.stable-image-core-v1:1",
     "name": "Stable Image Core",
     "provider": "Stability AI",
     "aliases": ["stable-core"],
-    "region": "us-west-2",
-    "format": "stability"
+    "region": "us-west-2"
   }
 ]

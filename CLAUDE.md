@@ -10,7 +10,7 @@
 
 ## Project
 
-MCP server exposing AWS Bedrock models (text, image, video, embeddings) as tools -- ask/compare Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS and more from Claude Code or any MCP client.
+MCP server exposing AWS Bedrock models (text, image, video, embeddings) as tools -- ask/compare Claude, GPT, Grok, Kimi, Mistral, Nova, Qwen, DeepSeek and more from Claude Code or any MCP client.
 
 Public OSS (MIT), published from `github.com/Sagargupta16/bedrock-multi-model-mcp`, consumed locally as the `bedrock` MCP server.
 
@@ -38,8 +38,9 @@ npm run test     # builds, then node --test dist/**/*.test.js
 npm run lint     # tsc --noEmit
 ```
 
-- Suites: `src/models.test.ts` (registries, measured `effort` / `structured_output` flags, server.json/package.json sync), `src/judge.test.ts` (bedrock_judge with an injected fake converse), `src/bedrock/converse.test.ts` (request building: outputConfig, option rejection, JSON reply parsing), `src/bedrock/client.test.ts` (bearer fallback rules). Tests run against compiled `dist/`, so build first (`npm run test` handles it).
+- Suites: `src/models.test.ts` (registries, measured `effort` / `structured_output` flags, server.json/package.json sync), `src/judge.test.ts` (bedrock_judge with an injected fake converse), `src/bedrock/converse.test.ts` (request building: outputConfig, option rejection, JSON reply parsing). Tests run against compiled `dist/`, so build first (`npm run test` handles it). `tsc` never deletes outputs, so after removing a source file run `npm run clean` or a stale `dist/*.test.js` keeps running.
 - `npm run benchmark` makes live, billed Bedrock calls; `node scripts/benchmark.mjs --from docs/benchmark/results.json` only re-renders the table.
+- `npm run lifecycle` checks every registry id against AWS's public Legacy/EOL page (no credentials, no billing).
 
 ## Entry points
 
@@ -51,7 +52,8 @@ npm run lint     # tsc --noEmit
 - `src/data/*.json` -- model registries (text/image/video/embedding). Source of truth for the catalog; edit these to add/remove models, not code.
 - `src/models.ts` -- loads + validates registry data, resolves aliases.
 - `src/types.ts` -- Zod schemas the registries are validated against at load time.
-- `src/bedrock/client.ts` -- shared region/auth config + `withBearerFallback` (raw HTTP retry on auth errors only).
+- `src/bedrock/client.ts` -- shared region/auth config, one cached SDK client per region, and the empty-bearer-token guard.
+- `scripts/check-lifecycle.mjs` + `.github/workflows/lifecycle.yml` -- weekly (and on registry PRs) check that no registry model is Legacy or EOL on AWS.
 - `src/judge.ts` -- bedrock_judge: shuffled blind labels, judge prompt, verdict parsing, report formatting.
 - `server.json` + `.github/workflows/release.yml` -- MCP Registry metadata and the tag-triggered npm + registry publish (OIDC, no stored tokens).
 - `src/bedrock/{converse,image,video,embed}.ts` -- per-modality API wrappers (Converse / InvokeModel / StartAsyncInvoke).
@@ -59,13 +61,15 @@ npm run lint     # tsc --noEmit
 ## Gotchas
 
 - Build copies `src/data/` to `dist/data/` (`copy-data` script). Editing a registry JSON without rebuilding leaves the running server stale.
-- Auth is dual-path: `AWS_BEARER_TOKEN_BEDROCK` (SDK >= 3.840.0 reads it natively) with a raw HTTP `Authorization: Bearer` fallback in `client.ts`, else the standard IAM credential chain. The fallback fires only on auth-rejection error names; never widen it to throttles or timeouts (a retried StartAsyncInvoke bills a second video).
+- Auth is the SDK's alone: it picks bearer auth whenever `AWS_BEARER_TOKEN_BEDROCK` exists (even empty, which then fails every call with "the `token` is not defined", so `client.ts` deletes an empty value at startup), else the standard IAM credential chain. The raw-HTTP bearer retry was removed in 0.7.0: it resent the same token the SDK had just sent, so it could never succeed. Don't add retries around `StartAsyncInvoke` (a retry bills a second video).
+- Every tool passes the MCP request's `extra.signal` to `client.send(..., { abortSignal })`, except `startVideoGeneration`: a start cancelled after it was sent can leave a billed job with no ARN.
 - Version lives in three places: `package.json`, and `version` + `packages[0].version` in `server.json`. A test fails on skew.
 - Regions split: text defaults to `AWS_REGION` (us-east-1); image (Stability) and video (Luma Ray 2) models live in us-west-2, and the video output S3 bucket must also be in us-west-2.
-- Many foundation models require the `us.` cross-region inference profile prefix for on-demand invocation -- registries store the verified-working form per model. Keep only ACTIVE models (EOL entries like Nova Reel were purged).
-- Structured output and effort both ride on Converse `outputConfig` (`textFormat` takes the schema as a JSON **string**; `effort` is a plain field). Registry flags `structured_output` and `effort` were measured per model on 2026-10-21; `buildConverseInput` rejects an unsupported option before the call, `effortFor` drops effort per model in compare/judge. GPT-OSS prefixes its JSON with a stray `B`, handled in `parseJsonReply`.
+- Many foundation models require the `us.` cross-region inference profile prefix for on-demand invocation -- registries store the verified-working form per model. Keep only ACTIVE models: Legacy entries go too, because AWS blocks new customers from them (the five that went Legacy on 2026-09-30 left in 0.7.0). `npm run lifecycle` catches new listings.
+- Structured output and effort both ride on Converse `outputConfig` (`textFormat` takes the schema as a JSON **string**; `effort` is a plain field). Registry flags `structured_output`, `effort` and `noTemperature` were measured per model on 2026-10-21, and on 2026-11-01 for the models added in 0.7.0; `buildConverseInput` rejects an unsupported option before the call, `effortFor` drops effort per model in compare/judge. A model can accept `textFormat` and ignore it (Magistral Small did), so check the reply matches the schema before flagging it. GPT-OSS prefixes its JSON with a stray `B`, handled in `parseJsonReply`.
+- Cohere Embed v4 returns `embeddings` keyed by type (`{ float: [...] }`) even when no type is requested; v3 returned a bare array. `embed.ts` handles both.
 - Generated images land in `BEDROCK_MCP_OUTPUT_DIR`, falling back to cwd then `~/bedrock-images`.
-- CI is `.github/workflows/ci.yml`: `npm ci --ignore-scripts` + `npm run lint` + `npm test` on push to `main` and on every PR, across a Node matrix (22, 24 and 26). Renovate is enabled via `renovate.json`.
+- CI is `.github/workflows/ci.yml`: `npm ci --ignore-scripts` + `npm run lint` + `npm test` on push to `main` and on every PR, across a Node matrix (22, 24 and 26). `.github/workflows/lifecycle.yml` runs `scripts/check-lifecycle.mjs` weekly and on PRs that touch `src/data/`. Renovate is enabled via `renovate.json`.
 
 ## Repo-specific rules
 
@@ -77,7 +81,7 @@ npm run lint     # tsc --noEmit
 
 ## Usage                (CLI / tool)
 
-- `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for Claude thinking depth.
+- `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for thinking depth (Claude, GPT-6.1, Grok 4.7, Kimi K3).
 - `bedrock_compare` -- same prompt to 2-5 models side by side; takes `schema` and `effort`.
 - `bedrock_judge` -- 2-5 models answer, a judge model (default claude-opus, Opus 5.5) scores them blind and picks a winner; the verdict uses structured output when the judge supports it.
 - `bedrock_generate_image` / `bedrock_generate_video` + `bedrock_video_status` -- media generation.

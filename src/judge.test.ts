@@ -18,13 +18,13 @@ function fakeResult(modelId: string, text: string): ConverseResult {
 }
 
 test("assignLabels resolves aliases and labels A.. in shuffled order", () => {
-  const fixed = assignLabels(["llama4", "nova-pro"], keepOrder);
+  const fixed = assignLabels(["kimi", "nova-pro"], keepOrder);
   assert.deepEqual(fixed.map((c) => c.label), ["A", "B"]);
   assert.equal(fixed[1].modelId, "amazon.nova-pro-v1:0");
   assert.equal(fixed[1].name, "Nova Pro (Amazon)");
 
   // random() = 0 swaps every position with index 0, reversing a 2-item list.
-  const swapped = assignLabels(["llama4", "nova-pro"], () => 0);
+  const swapped = assignLabels(["kimi", "nova-pro"], () => 0);
   assert.equal(swapped[0].modelId, "amazon.nova-pro-v1:0");
   assert.equal(swapped[0].label, "A");
 });
@@ -68,20 +68,20 @@ test("runJudge sends anonymous answers to the judge and maps the winner back", a
     if (o.modelId === "us.anthropic.claude-opus-5-5") {
       return fakeResult(o.modelId, '{"scores":{"A":3,"B":8},"winner":"B","reasoning":"B is correct."}');
     }
-    return fakeResult(o.modelId, o.modelId.includes("nova") ? "nova says 4" : "llama says 5");
+    return fakeResult(o.modelId, o.modelId.includes("nova") ? "nova says 4" : "kimi says 5");
   };
-  const report = await runJudge({ models: ["llama4", "nova-pro"], prompt: "2+2?" }, ask, keepOrder);
+  const report = await runJudge({ models: ["kimi", "nova-pro"], prompt: "2+2?" }, ask, keepOrder);
 
   assert.equal(calls.length, 3);
   const judgeCall = calls[2];
   assert.equal(judgeCall.temperature, 0);
-  assert.doesNotMatch(judgeCall.prompt, /Llama|Nova/, "judge must not see model names");
+  assert.doesNotMatch(judgeCall.prompt, /Kimi|Nova/, "judge must not see model names");
   assert.equal(report.verdict?.winner, "B");
 
   const text = formatJudgeReport(report);
   assert.match(text, /## Winner: Nova Pro \(Amazon\)/);
   assert.match(text, /\| 1 \| Nova Pro \(Amazon\) \| 8\/10 \|/);
-  assert.match(text, /### Answer A: Llama 4 Maverick/);
+  assert.match(text, /### Answer A: Kimi K3/);
 });
 
 test("buildVerdictSchema scores every label and limits the winner to them", () => {
@@ -114,7 +114,7 @@ test("a structured-output judge gets the verdict schema; candidates get effort",
 
   // Nova Pro rejects outputConfig, so as a judge it is asked for JSON in the prompt only.
   calls.length = 0;
-  await runJudge({ models: ["llama4", "deepseek"], prompt: "q", judge: "nova-pro" }, ask, keepOrder);
+  await runJudge({ models: ["kimi", "deepseek"], prompt: "q", judge: "nova-pro" }, ask, keepOrder);
   assert.equal(calls[2].modelId, "amazon.nova-pro-v1:0");
   assert.equal(calls[2].schema, undefined);
 });
@@ -126,11 +126,11 @@ test("a tied top score ranks the judge's winner first", async () => {
       ? fakeResult(o.modelId, '{"scores":{"A":9,"B":9},"winner":"B","reasoning":"B is tighter."}')
       : fakeResult(o.modelId, "same answer");
   const text = formatJudgeReport(
-    await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+    await runJudge({ models: ["kimi", "nova-pro"], prompt: "q" }, ask, keepOrder),
   );
   assert.match(text, /## Winner: Nova Pro \(Amazon\)/);
   assert.match(text, /\| 1 \| Nova Pro \(Amazon\) \| 9\/10 \|/);
-  assert.match(text, /\| 2 \| Llama 4 Maverick 17B \(Meta\) \| 9\/10 \|/);
+  assert.match(text, /\| 2 \| Kimi K3 \(Moonshot AI\) \| 9\/10 \|/);
 });
 
 test("runJudge reports failed candidates and skips the judge when one answer is left", async () => {
@@ -140,10 +140,10 @@ test("runJudge reports failed candidates and skips the judge when one answer is 
     if (o.modelId.includes("opus")) judged = true;
     return fakeResult(o.modelId, "only answer");
   };
-  const report = await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder);
+  const report = await runJudge({ models: ["kimi", "nova-pro"], prompt: "q" }, ask, keepOrder);
   assert.equal(judged, false);
   const text = formatJudgeReport(report);
-  assert.match(text, /Only Llama 4 Maverick 17B \(Meta\) answered/);
+  assert.match(text, /Only Kimi K3 \(Moonshot AI\) answered/);
   assert.match(text, /\*\*Failed:\*\* Nova Pro \(Amazon\) - AccessDeniedException/);
 });
 
@@ -152,7 +152,7 @@ test("runJudge throws when no candidate answers", async () => {
     throw new Error("ThrottlingException");
   };
   await assert.rejects(
-    runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+    runJudge({ models: ["kimi", "nova-pro"], prompt: "q" }, ask, keepOrder),
     /No candidate model answered/,
   );
 });
@@ -163,7 +163,7 @@ test("a failed judge call still returns the candidate answers", async () => {
     return fakeResult(o.modelId, `answer from ${o.modelId}`);
   };
   const text = formatJudgeReport(
-    await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+    await runJudge({ models: ["kimi", "nova-pro"], prompt: "q" }, ask, keepOrder),
   );
   assert.match(text, /Judge Claude Opus 5\.5 \(Anthropic\) failed/);
   assert.match(text, /answer from amazon\.nova-pro-v1:0/);
@@ -173,9 +173,9 @@ test("an unparsable verdict falls back to the raw judge text with the label key"
   const ask = async (o: ConverseOptions): Promise<ConverseResult> =>
     fakeResult(o.modelId, o.modelId.includes("opus") ? "I prefer the second one." : "x");
   const text = formatJudgeReport(
-    await runJudge({ models: ["llama4", "nova-pro"], prompt: "q" }, ask, keepOrder),
+    await runJudge({ models: ["kimi", "nova-pro"], prompt: "q" }, ask, keepOrder),
   );
   assert.match(text, /did not return a parsable verdict/);
-  assert.match(text, /A = Llama 4 Maverick 17B \(Meta\), B = Nova Pro \(Amazon\)/);
+  assert.match(text, /A = Kimi K3 \(Moonshot AI\), B = Nova Pro \(Amazon\)/);
   assert.match(text, /I prefer the second one\./);
 });

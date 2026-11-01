@@ -146,6 +146,8 @@ export interface JudgeOptions {
   judge?: string;
   criteria?: string;
   synthesize?: boolean;
+  // Aborts every candidate call and the judge call when the MCP client cancels.
+  signal?: AbortSignal;
 }
 
 export interface JudgeReport {
@@ -175,6 +177,7 @@ export async function runJudge(
         temperature: options.temperature,
         maxTokens: options.maxTokens,
         effort: effortFor(c.modelId, options.effort),
+        signal: options.signal,
       }),
     ),
   );
@@ -202,7 +205,14 @@ export async function runJudge(
     : undefined;
   let judgeResult: ConverseResult;
   try {
-    judgeResult = await ask({ modelId: judgeId, prompt: judgePrompt, temperature: 0, schema, schemaName: "verdict" });
+    judgeResult = await ask({
+      modelId: judgeId,
+      prompt: judgePrompt,
+      temperature: 0,
+      schema,
+      schemaName: "verdict",
+      signal: options.signal,
+    });
   } catch (err) {
     return {
       judgeId,

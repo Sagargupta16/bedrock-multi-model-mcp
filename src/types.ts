@@ -12,7 +12,8 @@ export const CAPABILITIES = [
   "streaming",
   "reasoning",
   // Accepts Converse outputConfig.textFormat (JSON schema output). Measured per
-  // model: Nova, Llama, Mistral Small, Pixtral and DeepSeek R1 reject the field.
+  // model: Nova and Pixtral reject the field, and Magistral Small accepts it but
+  // ignores the schema (2026-11-01).
   "structured_output",
 ] as const;
 
@@ -30,8 +31,8 @@ export const TextModelSchema = z.object({
   // deliberately below the model's documented ceiling; override per call.
   maxTokens: z.number().positive(),
   noTemperature: z.boolean().optional(),
-  // Accepts Converse outputConfig.effort. Claude Haiku 4.5 rejects it
-  // ("This model doesn't support the effort field").
+  // Accepts Converse outputConfig.effort. Measured per model: Claude Haiku 4.5 and
+  // the open-weight models reject it ("This model doesn't support the effort field").
   effort: z.boolean().optional(),
 });
 
@@ -45,9 +46,6 @@ export const ImageModelSchema = z.object({
   // and wrong (a stable-core 16:9 request wrote 2016x1152 on 2026-09-06).
   // Region the model is served from; falls back to the default region.
   region: z.string().optional(),
-  // Request body shape: Amazon (taskType/textToImageParams) or Stability
-  // (prompt/aspect_ratio). Defaults to "amazon".
-  format: z.enum(["amazon", "stability"]).optional(),
 });
 
 export const VideoModelSchema = z.object({

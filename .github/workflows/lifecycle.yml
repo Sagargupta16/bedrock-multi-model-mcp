@@ -1,0 +1,30 @@
+name: Model lifecycle
+
+# Weekly check that no registry model has gone Legacy or end-of-life on
+# Bedrock. It reads AWS's public lifecycle page, so it needs no credentials; a
+# failed run names each model with its Legacy and EOL dates. Also runs when a
+# registry file changes, so a Legacy model cannot be added.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/data/**"
+      - "scripts/check-lifecycle.mjs"
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      # Node built-ins and fetch only, so there is nothing to install.
+      - run: node scripts/check-lifecycle.mjs

@@ -2,6 +2,57 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-11-01
+
+### Added
+
+- Nine text models, each live-probed on 2026-11-01 for a plain call, `temperature`, `schema` and `effort` before it was added:
+  - GPT-6.1 Sol (`gpt-sol`) and GPT-6.1 Terra (`gpt-terra`), Grok 4.7 (`grok`) and Kimi K3 (`kimi`). All four take `schema` and `effort` and reject `temperature` ("This model doesn't support the temperature field"), so they are flagged `noTemperature`.
+  - MiniMax M2.5 (`minimax`), Nemotron 3 Super 120B (`nemotron`), Ministral 3 14B (`ministral`) and Qwen3 Next 80B A3B (`qwen-next`). These take `schema` and `temperature`, not `effort`.
+  - Magistral Small (`magistral`). It is not flagged `structured_output`: it accepted `outputConfig.textFormat` but ignored it, answering with fenced JSON and a different key.
+- Cohere Embed v4 (`cohere.embed-v4:0`, alias `cohere`, 1536 dimensions). Its response keys the vectors by type (`{ float: [...] }`) even when no type is requested, unlike v3's bare array; `embed()` reads both, and it also recognizes the `us.cohere.` inference profile.
+- `scripts/check-lifecycle.mjs` (`npm run lifecycle`) fails when a registry model is listed on AWS's public model lifecycle page. It needs no credentials. `.github/workflows/lifecycle.yml` runs it weekly and on PRs that touch `src/data/`. Against the 0.6.0 registry it flags exactly the five Legacy models below.
+- Cancellation: every tool except `bedrock_generate_video` passes the MCP request's abort signal to Bedrock, so a cancelled or timed-out tool call stops the request. Measured on 2026-11-01: a Nova Micro call aborted at 400 ms settled at 412 ms; the same call left to finish took 6.4 s. Video starts are excluded on purpose, because cancelling a sent `StartAsyncInvoke` could leave a billed job with no ARN to track.
+
+### Removed
+
+- **Breaking:** Llama 4 Maverick (`llama4`), Llama 4 Scout, Llama 3.3 70B, Devstral 2 and DeepSeek R1.
+  - AWS moved all five to Legacy on 2026-09-30, with EOL on 2027-03-30, and "new customers can't use Legacy models". So the `llama4` examples in the tool descriptions and README failed for new accounts.
+  - AWS lists no Active Meta model, so Llama leaves the catalog.
+- **Breaking:** these Active but superseded models are removed:
+  - Claude Opus 4.8 and 4.7 (`claude-opus-4.8`, `claude-opus-4.7`); Opus 5 and 5.5 cover them, and Opus 4.6 stays as the Opus that still takes `temperature`.
+  - Mistral Small 2402 (`mistral-small`), now covered by Ministral 3.
+  - Titan Text Embeddings V1 (`titan-v1`).
+  - Cohere Embed English and Multilingual v3. Their aliases (`cohere-en`, `cohere-english`, `cohere-multi`, `cohere-multilingual`) now resolve to Embed v4.
+- The raw-HTTP bearer-token fallback (`withBearerFallback`, `bedrockFetch`) and its 7 tests.
+  - With `AWS_BEARER_TOKEN_BEDROCK` set, the SDK already sends that token, ahead of any IAM keys, so the retry resent the same rejected credential and could never succeed.
+  - Its `bedrock_video_status` branch also requested `/async-invoke/<id>` where the API takes the full ARN.
+- The Amazon image request shape and the image registry's `format` field. Every Active text-to-image model on Bedrock is Stability's (Nova Canvas reached EOL on 2026-09-30), so an image id outside the registry now gets the Stability shape too.
+- The `rimraf` dev dependency; `npm run clean` uses `fs.rmSync`.
+
+### Fixed
+
+- A set-but-empty `AWS_BEARER_TOKEN_BEDROCK` broke every call with "request could not be signed with `token` since the `token` is not defined".
+  - This happens with an MCP config that passes `"${AWS_BEARER_TOKEN_BEDROCK}"` from a client whose own environment lacks the variable: the SDK picks bearer auth whenever the variable exists.
+  - The server now drops an empty value at startup, so the IAM credential chain answers.
+- `bedrock_compare` reported success when every model failed; it now sets `isError` in that case. Partial failures still return the answers that came back.
+- Two images finished in the same millisecond overwrote each other. File names now end in an 8-character random suffix.
+- `max_tokens` on `bedrock_ask`, `bedrock_compare` and `bedrock_judge` accepted fractions, and `seed` on `bedrock_generate_image` accepted fractions and negatives, all of which Bedrock then rejected. The tool schemas now refuse them.
+- Titan embeddings ran one request after another (50 texts, 50 round trips in a row). They now run 8 at a time.
+- `server.json` described 26 text models; the registry has 30.
+
+### Security
+
+- `npm audit` went from 5 findings to 0, closing the 6 open Dependabot alerts:
+  - body-parser 2.3.0 -> 2.4.0 (GHSA-27r3-jxmh-p828, high) and fast-uri 3.1.8 -> 3.1.9 (4 advisories), both through `@modelcontextprotocol/sdk` 1.32.2.
+  - glob and minimatch left with rimraf.
+- Manifest floors raised to `@aws-sdk/client-bedrock-runtime` ^3.1161.0 and `@modelcontextprotocol/sdk` ^1.32.2.
+
+### Changed
+
+- One `loadRegistry` and `indexByAlias` in `src/models.ts` replace the four copies of registry loading and alias indexing. One `errorResult` in `src/index.ts` replaces six copies of the error branch.
+- Examples in the tool descriptions, README and scripts use `kimi` instead of `llama4`. The `effort` and `schema` descriptions list the models that take them.
+
 ## [0.6.0] - 2026-10-21
 
 ### Added

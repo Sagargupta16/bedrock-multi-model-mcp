@@ -6,19 +6,22 @@
 [![Last commit](https://img.shields.io/github/last-commit/Sagargupta16/bedrock-multi-model-mcp?style=flat-square)](https://github.com/Sagargupta16/bedrock-multi-model-mcp/commits/main)
 [![CI](https://img.shields.io/github/actions/workflow/status/Sagargupta16/bedrock-multi-model-mcp/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Sagargupta16/bedrock-multi-model-mcp/actions/workflows/ci.yml)
 
-MCP server for AWS Bedrock - text, image, video and embeddings from any model. Use Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS, and more from Claude Code (or any MCP client).
+MCP server for AWS Bedrock - text, image, video and embeddings from any model. Use Claude, GPT, Grok, Kimi, Mistral, Nova, Qwen, DeepSeek, and more from Claude Code (or any MCP client).
 
-**Why:** Bedrock already gives one AWS account access to models from seven text providers,
+**Why:** Bedrock already gives one AWS account access to models from ten text providers,
 but each one is a different model ID, inference profile, region and request shape. This
 server puts them behind eight MCP tools and one set of AWS credentials, so an agent can
 ask a second model for a review, run the same prompt across five models side by side, have
 a judge model score those answers blind, or generate an image, without leaving the chat or
 writing SDK code.
 
-At a glance: 29 text models from 7 providers, 3 image models, 1 video model and 5
+At a glance: 30 text models from 10 providers, 3 image models, 1 video model and 3
 embedding models, all defined as data in [src/data/](src/data/) and validated at startup.
-The 26 text models in the 2026-10-18 [benchmark](#benchmark) answered every call; Claude
-Opus 5.5, Sonnet 5.5 and Haiku 5.5 joined the registry after that run.
+The 26 text models in the 2026-10-18 [benchmark](#benchmark) answered every call. Since
+that run, Claude Opus 5.5, Sonnet 5.5 and Haiku 5.5 and, in 0.7.0, nine models from
+OpenAI, xAI, Moonshot AI, MiniMax, NVIDIA, Mistral and Qwen joined the registry, while the
+five models AWS moved to Legacy on 2026-09-30 (Llama 4 Maverick and Scout, Llama 3.3 70B,
+Devstral 2, DeepSeek R1) left it.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/demo/judge-dark.svg">
@@ -30,13 +33,14 @@ A real `bedrock_judge` run from 2026-10-18, called through
 [`scripts/call-tool.mjs`](scripts/call-tool.mjs) with the arguments in
 [docs/demo/judge-args.json](docs/demo/judge-args.json). The output lines are excerpted from
 that run with the table columns aligned; the full reply also carries the judge's reasoning
-and all three answers.
+and all three answers. Llama 4 Maverick has since gone Legacy on Bedrock and left the
+registry, so swap `llama4` for another model to rerun it.
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. `schema` returns JSON that matches a JSON schema; `effort` sets Claude's thinking depth. |
+| `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. `schema` returns JSON that matches a JSON schema; `effort` sets the thinking depth. |
 | `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. Takes `schema` and `effort` too. |
 | `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. The verdict comes back as schema-checked JSON when the judge supports it. |
 | `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
@@ -53,18 +57,26 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 
 | Provider | Models | Aliases |
 |----------|--------|---------|
-| Anthropic | Claude Fable 5.1, Opus 5.5, Sonnet 5.5, Haiku 5.5 (current); Fable 5, Opus 5 / 4.8 / 4.7 / 4.6, Sonnet 5 / 4.6, Haiku 4.5 (previous-gen) | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
-| Meta | Llama 4 Maverick, Llama 4 Scout, Llama 3.3 70B | `llama4`, `llama4-scout`, `llama3.3` |
-| Mistral | Mistral Large 3, Devstral 2, Mistral Small, Pixtral Large | `mistral-large`, `devstral`, `mistral-small`, `pixtral` |
+| Anthropic | Claude Fable 5.1, Opus 5.5, Sonnet 5.5, Haiku 5.5 (current); Fable 5, Opus 5 / 4.6, Sonnet 5 / 4.6, Haiku 4.5 (previous-gen) | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
+| OpenAI | GPT-6.1 Sol, GPT-6.1 Terra, GPT-OSS 120B, GPT-OSS 20B | `gpt-sol`, `gpt-terra`, `gpt-oss`, `gpt-oss-20b` |
+| xAI | Grok 4.7 | `grok` |
+| Moonshot AI | Kimi K3 | `kimi` |
+| Mistral | Mistral Large 3, Ministral 3 14B, Magistral Small, Pixtral Large | `mistral-large`, `ministral`, `magistral`, `pixtral` |
 | Amazon | Nova Pro, Nova 2 Lite, Nova Lite, Nova Micro | `nova-pro`, `nova2-lite`, `nova-lite`, `nova-micro` |
-| Qwen | Qwen3 Coder Next, Qwen3 VL 235B | `qwen-coder`, `qwen-vl` |
-| DeepSeek | DeepSeek V3.2, DeepSeek R1 | `deepseek`, `deepseek-r1` |
-| OpenAI | GPT-OSS 120B, GPT-OSS 20B | `gpt-oss`, `gpt-oss-20b` |
+| Qwen | Qwen3 Coder Next, Qwen3 VL 235B, Qwen3 Next 80B A3B | `qwen-coder`, `qwen-vl`, `qwen-next` |
+| DeepSeek | DeepSeek V3.2 | `deepseek` |
+| MiniMax | MiniMax M2.5 | `minimax` |
+| NVIDIA | Nemotron 3 Super 120B | `nemotron` |
 
-Bare-tier aliases (`fable`, `claude-opus`, `claude-sonnet`, `claude-haiku`) track the
-current model in that tier; version-pinned aliases (`fable-5`, `claude-opus-5`,
-`claude-sonnet-5`, `claude-haiku-4.5`, `claude-opus-4.8`, `claude-sonnet-4.6`) keep the
-previous generations reachable. AWS announced Claude Opus 5.5 on Bedrock on 2026-09-22,
+Listed on Bedrock but not in the registry: GLM 5.3 and Claude Mythos 5.1 (access is gated
+per account; both failed the 2026-11-01 probe), and Gemma 4 and Grok 4.3 (served only on
+the OpenAI-compatible `bedrock-mantle` endpoint, not through Converse). AWS lists no
+Active Meta model.
+
+Bare-tier aliases (`fable`, `claude-opus`, `claude-sonnet`, `claude-haiku`, `gpt-sol`,
+`gpt-terra`) track the current model in that tier; version-pinned aliases (`fable-5`,
+`claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4.5`, `claude-opus-4.6`,
+`claude-sonnet-4.6`) keep the previous generations reachable. AWS announced Claude Opus 5.5 on Bedrock on 2026-09-22,
 Sonnet 5.5 on 2026-09-28 and Haiku 5.5 on 2026-10-07, so the bare `claude-opus`,
 `claude-sonnet` and `claude-haiku` now resolve to the 5.5 models.
 
@@ -72,9 +84,10 @@ Sonnet 5.5 on 2026-09-28 and Haiku 5.5 on 2026-10-07, so the bare `claude-opus`,
 `temperature` / `top_p` / `top_k` for Claude Opus 4.7 and later, where a non-default
 value returns a 400, so `text-models.json` marks those entries `noTemperature` and this
 server omits the parameter for them - the `temperature` argument is accepted but has no
-effect. The three 5.5 models return the same 400 (probed 2026-10-21). Claude Haiku
-4.5, Opus 4.6 and Sonnet 4.6 still honor it, so pin `claude-sonnet-4.6` or
-`claude-haiku-4.5` if you need to set it.
+effect. The three 5.5 models return the same 400 (probed 2026-10-21), and so do GPT-6.1
+Sol and Terra, Grok 4.7 and Kimi K3 ("This model doesn't support the temperature field",
+probed 2026-11-01). Claude Haiku 4.5, Opus 4.6 and Sonnet 4.6 still honor it, so pin
+`claude-sonnet-4.6` or `claude-haiku-4.5` if you need to set it on a Claude model.
 
 The `maxTokens` value in `text-models.json` is the default output cap **this server**
 sends when a call omits `max_tokens` - deliberately below the model's own ceiling
@@ -87,16 +100,19 @@ Haiku 4.5). Pass `max_tokens` to go higher on a single call.
 `outputConfig.textFormat`, so the reply is JSON that matches it, shown pretty-printed.
 Object schemas need `"additionalProperties": false`; Bedrock rejects numeric and string
 length constraints (`minimum`, `maxLength` and the like) with a 400. Probed on every
-registry model on 2026-10-21: all 12 Claude models, Mistral Large 3, Devstral 2, both
-Qwen3 models, DeepSeek V3.2 and both GPT-OSS models accept it (`structured_output` in
-`bedrock_list_models`). Nova, Llama, Mistral Small, Pixtral and DeepSeek R1 answer
-"This model doesn't support the outputConfig field", so this server refuses the call
-before it is billed. GPT-OSS puts a stray character before its JSON (`B{...}`); the
-reply parser skips anything before the first brace.
+registry model (2026-10-21, and 2026-11-01 for the models added then): all 10 Claude
+models, GPT-6.1 Sol and Terra, both GPT-OSS models, Grok 4.7, Kimi K3, Mistral Large 3,
+Ministral 3, all three Qwen3 models, DeepSeek V3.2, MiniMax M2.5 and Nemotron 3 Super
+accept it (`structured_output` in `bedrock_list_models`). Nova and Pixtral answer "This
+model doesn't support the outputConfig field", and Magistral Small accepts the field but
+ignores the schema, so this server refuses the call before it is billed. GPT-OSS puts a
+stray character before its JSON (`B{...}`); the reply parser skips anything before the
+first brace.
 
-`effort` (`low`, `medium`, `high`, `xhigh`, `max`) sets Claude's thinking depth and
-token spend through Converse `outputConfig.effort`. Every Claude model except Haiku 4.5
-takes it. Opus 5.5 and Haiku 5.5 default to `medium`, the others to `high`. On
+`effort` (`low`, `medium`, `high`, `xhigh`, `max`) sets the thinking depth and token
+spend through Converse `outputConfig.effort`. Every Claude model except Haiku 4.5 takes
+it, and so do GPT-6.1 Sol and Terra, Grok 4.7 and Kimi K3 (probed 2026-11-01). Claude
+Opus 5.5 and Haiku 5.5 default to `medium`, the other Claude models to `high`. On
 2026-10-21, "How many primes are below 100?" cost Haiku 5.5 3 output tokens at `low`
 and 60 at `max`, with the same answer. `bedrock_ask` rejects `effort` for a model that
 does not take it; `bedrock_compare` and `bedrock_judge` apply it only to the candidates
@@ -125,20 +141,24 @@ is the real output size rather than what you asked for.
 The output S3 bucket must be in us-west-2 (same region as the model).
 
 Amazon Nova Canvas/Reel and Titan Image were removed when AWS marked them
-end-of-life (Nova Reel EOL 2026-09-30); the registry only ships ACTIVE models.
+end-of-life (Nova Canvas and Nova Reel EOL 2026-09-30). The registry only ships ACTIVE
+models: AWS blocks new customers from Legacy ones. `npm run lifecycle` checks every
+registry id against AWS's public lifecycle page (no credentials needed), and CI runs it
+weekly and on every registry change.
 
 ### Embeddings (InvokeModel API)
 
 | Model | Alias | Dimensions |
 |-------|-------|------------|
 | Amazon Titan Text Embeddings V2 | `titan-v2` | 1024 |
-| Amazon Titan Text Embeddings V1 | `titan-v1` | 1536 |
 | Amazon Titan Multimodal Embeddings | `titan-multimodal` | 1024 |
-| Cohere Embed English v3 | `cohere-en` | 1024 |
-| Cohere Embed Multilingual v3 | `cohere-multi` | 1024 |
+| Cohere Embed v4 | `cohere` | 1536 |
 
 `bedrock_embed_similarity` only sends text, so Titan Multimodal is exercised through
-its text path here and behaves like `titan-v2` at the same 1024 dimensions.
+its text path here and behaves like `titan-v2` at the same 1024 dimensions. The Cohere
+Embed v3 aliases (`cohere-en`, `cohere-multi`) now resolve to Embed v4, which covers
+English and multilingual text. Titan embeds one text per request, so this server sends
+8 at a time.
 
 You can also pass any valid Bedrock model ID directly. Note: many foundation models require a cross-region inference profile (`us.` prefix) for on-demand invocation - the registry uses the working form for each model.
 
@@ -232,7 +252,7 @@ cwd" behavior cannot apply and generated images fall back to `~/bedrock-images/`
 
 The server supports two auth methods:
 
-1. **Bedrock API Key (bearer token)** - Set `AWS_BEARER_TOKEN_BEDROCK`. The SDK (v3.840.0+) reads this automatically. If the SDK is rejected on auth, the request is retried once as raw HTTP with an `Authorization: Bearer` header; other errors are returned as they are.
+1. **Bedrock API Key (bearer token)** - Set `AWS_BEARER_TOKEN_BEDROCK`. The AWS SDK reads it and sends it as `Authorization: Bearer`, ahead of any IAM credentials. A set-but-empty value (for example an MCP config passing `"${AWS_BEARER_TOKEN_BEDROCK}"` from a client whose own environment lacks the variable) is ignored, so the IAM chain answers instead of every call failing with "the `token` is not defined".
 2. **IAM credentials** - Standard AWS credential chain (env vars, profile, SSO, IAM role).
 
 ## Usage Examples
@@ -240,7 +260,7 @@ The server supports two auth methods:
 ### Ask a single model
 
 ```
-"Use bedrock_ask to ask llama4 to explain Docker in 3 sentences"
+"Use bedrock_ask to ask kimi to explain Docker in 3 sentences"
 ```
 
 ### Get JSON that matches a schema
@@ -252,7 +272,7 @@ The server supports two auth methods:
 ### Compare models
 
 ```
-"Use bedrock_compare with llama4, nova-pro, and mistral-large: What are the pros and cons of microservices?"
+"Use bedrock_compare with kimi, nova-pro, and mistral-large: What are the pros and cons of microservices?"
 ```
 
 `bedrock_compare` runs one full generation per model in the list, and each one is
@@ -264,7 +284,7 @@ and, for the Claude models, [Anthropic pricing](https://platform.claude.com/docs
 ### Let a judge pick the best answer
 
 ```
-"Use bedrock_judge with llama4, nova-pro and deepseek: In two sentences, when should a team pick SQS over SNS?"
+"Use bedrock_judge with kimi, nova-pro and deepseek: In two sentences, when should a team pick SQS over SNS?"
 ```
 
 The candidates answer in parallel. The judge (default `claude-opus`, override with
@@ -301,26 +321,27 @@ generation per candidate plus one for the judge.
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/diagrams/architecture-light.svg">
-  <img width="880" src="docs/diagrams/architecture-light.svg" alt="How a tool call reaches Bedrock: an MCP client such as Claude Code or Claude Desktop sends JSON-RPC over stdio to the 8 MCP tools of the bedrock-multi-model-mcp server, defined in index.ts with Zod input schemas. bedrock_list_models reads the model registries directly; every other tool calls an API wrapper (converse, image, video or embed), which takes the model's alias, region and request shape from the registries in src/data/*.json, checked with Zod at load. The wrapper sends the request through the Bedrock client, one cached SDK client per region, which retries once over HTTPS with the bearer token only when the SDK call is rejected on auth. Converse and embedding calls (InvokeModel) go to Amazon Bedrock in us-east-1, or the region AWS_REGION sets. Image calls (InvokeModel, Stability) and video jobs (StartAsyncInvoke, Luma Ray 2) go to Amazon Bedrock in us-west-2, where the asynchronous video job writes the MP4 to the S3 bucket named by the s3_uri argument. The image wrapper decodes the returned image and saves it as a local PNG file in output_dir, BEDROCK_MCP_OUTPUT_DIR or the working directory.">
+  <img width="880" src="docs/diagrams/architecture-light.svg" alt="How a tool call reaches Bedrock: an MCP client such as Claude Code or Claude Desktop sends JSON-RPC over stdio to the 8 MCP tools of the bedrock-multi-model-mcp server, defined in index.ts with Zod input schemas. bedrock_list_models reads the model registries directly; every other tool calls an API wrapper (converse, image, video or embed), which takes the model's alias, region and request shape from the registries in src/data/*.json, checked with Zod at load. The wrapper sends the request through the Bedrock client, one cached SDK client per region, which authenticates with the bearer token or the IAM credential chain; a cancelled tool call aborts its Bedrock request. Converse and embedding calls (InvokeModel) go to Amazon Bedrock in us-east-1, or the region AWS_REGION sets. Image calls (InvokeModel, Stability) and video jobs (StartAsyncInvoke, Luma Ray 2) go to Amazon Bedrock in us-west-2, where the asynchronous video job writes the MP4 to the S3 bucket named by the s3_uri argument. The image wrapper decodes the returned image and saves it as a local PNG file in output_dir, BEDROCK_MCP_OUTPUT_DIR or the working directory.">
 </picture>
 
 The spec behind the picture is [`docs/diagrams/architecture.yaml`](docs/diagrams/architecture.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
 
 A tool call resolves its model alias against the registry, picks the request shape and
-region from that entry, and sends it through a cached SDK client for that region. If the
-SDK call is rejected on auth (no credentials resolved, a bad or expired signature or token,
-`AccessDeniedException`) and `AWS_BEARER_TOKEN_BEDROCK` is set, the same request is retried
-once as raw HTTPS with an `Authorization: Bearer` header. Throttling, timeouts and 5xx
-errors are never retried, because the first request may already have run and been billed.
+region from that entry, and sends it through a cached SDK client for that region. The
+request carries the MCP call's abort signal, so when the client cancels a tool call (or
+gives up on it), the server stops waiting on Bedrock: a Nova Micro call aborted at 400 ms
+settled at 412 ms on 2026-11-01, against 6.4 s for the same call left to finish.
+`bedrock_generate_video` is the exception, because cancelling a `StartAsyncInvoke` that
+was already sent could leave a billed job running with no ARN to track it.
 
 ```
 src/
   index.ts          # MCP server - tool registration, stdio transport
   judge.ts          # bedrock_judge - blind labels, judge prompt, verdict parsing
-  models.ts         # Loads + validates text-model data, resolves aliases
+  models.ts         # Loads + validates registry data, resolves aliases
   types.ts          # Zod schemas for model data validation
   bedrock/
-    client.ts       # Shared region/auth config + raw HTTP fallback
+    client.ts       # Shared region/auth config, one cached SDK client per region
     converse.ts     # Converse API wrapper (text models)
     image.ts        # InvokeModel wrapper (image models)
     video.ts        # Async invoke wrapper (video models)
@@ -333,33 +354,36 @@ src/
 scripts/
   call-tool.mjs     # Minimal stdio MCP client: list tools or call one
   benchmark.mjs     # Latency benchmark across every text model
+  check-lifecycle.mjs # Fails if a registry model is Legacy or EOL on AWS's lifecycle page
 ```
 
 Model definitions are data, kept in `src/data/*.json` and validated against Zod schemas at load time, so the catalog can be updated without changing logic. The build copies these JSON files into `dist/data/`.
 
 - **Text**: Uses the [Converse API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html) - unified interface across all text models
-- **Image**: Uses [InvokeModel](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html) with model-specific request formats (handled internally)
+- **Image**: Uses [InvokeModel](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html) with the Stability request format (prompt and aspect ratio)
 - **Video**: Uses [StartAsyncInvoke](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_StartAsyncInvoke.html) - requires S3 bucket for output
 
 ### Design decisions
 
 | Decision | Why |
 |----------|-----|
-| Converse API for every text model | One request and response shape across all seven providers, so adding a text model is a JSON entry, not a new code path. |
+| Converse API for every text model | One request and response shape across all ten providers, so adding a text model is a JSON entry, not a new code path. |
 | Model catalog as JSON + Zod | A malformed or half-edited registry fails at startup, not on the first call. Capabilities are a closed enum, so a typo like `tool-use` is rejected at load. |
-| Per-model `noTemperature` flag | Claude Opus 4.7 and later return a 400 for a non-default `temperature`; the flag drops the parameter for exactly those entries. |
+| Per-model `noTemperature` flag | Claude Opus 4.7 and later, GPT-6.1, Grok 4.7 and Kimi K3 return a 400 for `temperature`; the flag drops the parameter for exactly those entries. |
 | Measured `effort` and `structured_output` flags | Each was probed live on every registry model, so an unsupported option fails with the list of models that take it, before a billed call. Ids outside the registry pass through for Bedrock to judge. |
 | Cached SDK client per region | Text and embeddings run in `AWS_REGION`, while the Stability and Luma models are only served from us-west-2. |
 | `Promise.allSettled` in `bedrock_compare` | One model without access, or one throttled call, reports its own error while the rest still answer. |
 | Blind, shuffled answers in `bedrock_judge` | LLM judges favor answers by position and by name. The judge sees only labels in a random order, and the tool maps them back to models afterwards. |
-| Bearer fallback on auth errors only | A retried `StartAsyncInvoke` after a timeout could start a second billed video job, so only rejections that happen before Bedrock does any work are retried. |
+| Cancelled calls abort the Bedrock request | A client that gave up on a tool call should not leave the server waiting on, and paying for, an answer nobody reads. Video starts are left alone, since a cancelled start could leave a billed job with no ARN. |
+| Weekly lifecycle check | AWS blocks new customers from Legacy models months before their EOL date, so `scripts/check-lifecycle.mjs` compares the registry with AWS's lifecycle page every week and on every registry change. |
 | Image size read from the saved PNG | Stability models take an aspect ratio and choose the pixels, so echoing the requested size back would be wrong. |
-| Region from the job ARN is validated | The bearer-token fallback puts the region into the request host, so an unchecked value could send the token to another server. |
+| Region from the job ARN is validated | The region picks the request host, so an unchecked value from a crafted ARN could send the signed request to another server. |
 
 ## Benchmark
 
-Every text model in the registry, same prompts, same machine, one run of
-[`scripts/benchmark.mjs`](scripts/benchmark.mjs). The latency includes the network round
+Every text model in the registry on 2026-10-18 (the 0.5.0 catalog), same prompts, same
+machine, one run of [`scripts/benchmark.mjs`](scripts/benchmark.mjs). Eight of these
+models have since left the registry (see the 0.7.0 changelog). The latency includes the network round
 trip from that machine to the region, so read it as a ranking within this run rather
 than a figure for your own setup. Raw per-call data is in
 [docs/benchmark/results.json](docs/benchmark/results.json); rerun it on your own account
@@ -416,8 +440,10 @@ node scripts/call-tool.mjs bedrock_ask '{"model":"nova-micro","prompt":"Say hi"}
 |-------|-------|-----|
 | `The provided model identifier is invalid.` | The ID does not resolve on Bedrock - usually a missing `us.` cross-region inference profile prefix, or a model that is not offered in your region. | Use a registry alias (`bedrock_list_models`), or add the `us.` prefix to the full ID. |
 | `` `temperature` is deprecated for this model. `` | A Claude 4.7-or-later model was reached without a registry entry, so the server sent its default `temperature` of 0.7. Anthropic deprecated `temperature` / `top_p` / `top_k` for Claude Opus 4.7 and later, and a non-default value returns a 400 there. Earlier models (Haiku 4.5, Opus 4.6, Sonnet 4.6) still accept it. | Call it through a registered alias, or add a registry entry with `"noTemperature": true` in `src/data/text-models.json`. |
-| `<model> does not support structured output` / `does not take effort` | This server's registry says the model rejects that option (measured 2026-10-21). | Pick a model from the list in the message, or drop `schema` / `effort`. |
+| `<model> does not support structured output` / `does not take effort` | This server's registry says the model rejects that option (measured 2026-10-21 and 2026-11-01). | Pick a model from the list in the message, or drop `schema` / `effort`. |
 | `This model doesn't support the outputConfig field.` | A model outside the registry rejected `schema` or `effort`. | Drop the option for that model. |
+| `This model doesn't support the temperature field.` | A model outside the registry that takes no `temperature` (GPT-6.1, Grok and Kimi do this) got the server's default 0.7. | Call it through a registered alias, or add a registry entry with `"noTemperature": true`. |
+| `Could not load credentials from any providers` | No bearer token reached the server (or it was empty) and no IAM credentials resolved. | Put the real token in the MCP config's `env`, or configure an AWS profile, SSO or IAM role. |
 | `AccessDeniedException` | Model access has not been granted to your account. | AWS Console > Bedrock > Model access, request the model, retry once it shows Access granted. |
 | `bedrock_video_status` reports `Failed` | Bedrock returns the reason on the job itself. | Read the `Reason:` line printed under the status and fix what it names. |
 

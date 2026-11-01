@@ -8,7 +8,7 @@ import {
 } from "@aws-sdk/client-bedrock-runtime";
 import { resolveModelId, getModelInfo, TEXT_MODELS } from "../models.js";
 import type { EffortLevel } from "../types.js";
-import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
+import { getClient } from "./client.js";
 
 export interface ConverseOptions {
   modelId: string;
@@ -20,6 +20,8 @@ export interface ConverseOptions {
   // JSON schema the reply must match (Converse outputConfig.textFormat).
   schema?: Record<string, unknown>;
   schemaName?: string;
+  // Aborts the request when the MCP client cancels the tool call.
+  signal?: AbortSignal;
 }
 
 export interface ConverseResult {
@@ -33,20 +35,13 @@ export interface ConverseResult {
   json?: unknown;
 }
 
-interface ConverseResponse {
-  output?: { message?: { role?: string; content?: Array<{ text?: string }> } };
-  stopReason?: string;
-  usage?: { inputTokens?: number; outputTokens?: number };
-  metrics?: { latencyMs?: number };
-}
-
 function supportedBy(flag: (m: (typeof TEXT_MODELS)[number]) => boolean): string {
   return TEXT_MODELS.filter(flag).map((m) => m.name).join(", ");
 }
 
 // Effort for one model of a multi-model call (compare, judge): kept for models
 // that take it and for ids outside the registry, dropped for the rest, so one
-// effort value can tune the Claude candidates without failing a Nova or Llama one.
+// effort value can tune the Claude candidates without failing a Nova or Mistral one.
 export function effortFor(modelId: string, effort?: EffortLevel): EffortLevel | undefined {
   if (!effort) return undefined;
   const info = getModelInfo(resolveModelId(modelId));
@@ -128,57 +123,22 @@ export function parseJsonReply(text: string): unknown {
 
 export async function converse(options: ConverseOptions): Promise<ConverseResult> {
   const input = buildConverseInput(options);
-  const { modelId: resolvedId, messages, system, inferenceConfig, outputConfig } = input;
-
   const start = Date.now();
 
-  // SDK first (handles IAM and, on SDK >= 3.840.0, the bearer token too); raw
-  // HTTP with the bearer token only if the SDK was rejected on auth.
-  const parsed = await withBearerFallback<ConverseResponse>(
-    async () => {
-      const response = await getClient().send(new ConverseCommand(input));
-      return {
-        output: {
-          message: {
-            content: response.output?.message?.content?.map((b) => ({
-              text: "text" in b ? b.text : "",
-            })),
-          },
-        },
-        stopReason: response.stopReason,
-        usage: response.usage,
-      };
-    },
-    async () => {
-      const body: Record<string, unknown> = {
-        messages: messages!.map((m) => ({
-          role: m.role,
-          content: m.content?.map((c) => ("text" in c ? { text: c.text } : c)),
-        })),
-        inferenceConfig,
-      };
-      if (system) {
-        body.system = system.map((s) => ("text" in s ? { text: s.text } : s));
-      }
-      if (outputConfig) body.outputConfig = outputConfig;
-      return (await bedrockFetch(
-        `model/${encodeURIComponent(resolvedId)}/converse`,
-        { method: "POST", body: JSON.stringify(body) },
-      )) as ConverseResponse;
-    },
-  );
+  // The SDK handles both IAM credentials and the bearer token (it reads
+  // AWS_BEARER_TOKEN_BEDROCK natively).
+  const response = await getClient().send(new ConverseCommand(input), {
+    abortSignal: options.signal,
+  });
 
-  const text = parsed.output?.message?.content?.map((b) => b.text ?? "").join("") ?? "";
-  const inputTokens = parsed.usage?.inputTokens ?? 0;
-  const outputTokens = parsed.usage?.outputTokens ?? 0;
-  const stopReason = parsed.stopReason ?? "unknown";
+  const text = response.output?.message?.content?.map((b) => b.text ?? "").join("") ?? "";
 
   return {
-    modelId: resolvedId,
+    modelId: input.modelId,
     text,
-    inputTokens,
-    outputTokens,
-    stopReason,
+    inputTokens: response.usage?.inputTokens ?? 0,
+    outputTokens: response.usage?.outputTokens ?? 0,
+    stopReason: response.stopReason ?? "unknown",
     latencyMs: Date.now() - start,
     json: options.schema ? parseJsonReply(text) : undefined,
   };
