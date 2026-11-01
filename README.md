@@ -298,31 +298,13 @@ generation per candidate plus one for the judge.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    client["MCP client<br/>(Claude Code, Claude Desktop, ...)"]
-    subgraph server["bedrock-multi-model-mcp (stdio)"]
-        tools["index.ts<br/>8 tools, Zod input schemas"]
-        registry["src/data/*.json<br/>model registries, Zod-validated"]
-        wrappers["converse / image / video / embed"]
-        auth["client.ts<br/>SDK client per region<br/>+ bearer-token HTTP fallback"]
-    end
-    subgraph aws["AWS Bedrock Runtime"]
-        east["AWS_REGION (default us-east-1)<br/>Converse, embeddings"]
-        west["us-west-2<br/>Stability images, Luma Ray 2"]
-    end
-    s3[("S3 bucket<br/>video output")]
-    disk[("local PNG files")]
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/diagrams/architecture-light.svg">
+  <img width="880" src="docs/diagrams/architecture-light.svg" alt="How a tool call reaches Bedrock: an MCP client such as Claude Code or Claude Desktop sends JSON-RPC over stdio to the 8 MCP tools of the bedrock-multi-model-mcp server, defined in index.ts with Zod input schemas. bedrock_list_models reads the model registries directly; every other tool calls an API wrapper (converse, image, video or embed), which takes the model's alias, region and request shape from the registries in src/data/*.json, checked with Zod at load. The wrapper sends the request through the Bedrock client, one cached SDK client per region, which retries once over HTTPS with the bearer token only when the SDK call is rejected on auth. Converse and embedding calls (InvokeModel) go to Amazon Bedrock in us-east-1, or the region AWS_REGION sets. Image calls (InvokeModel, Stability) and video jobs (StartAsyncInvoke, Luma Ray 2) go to Amazon Bedrock in us-west-2, where the asynchronous video job writes the MP4 to the S3 bucket named by the s3_uri argument. The image wrapper decodes the returned image and saves it as a local PNG file in output_dir, BEDROCK_MCP_OUTPUT_DIR or the working directory.">
+</picture>
 
-    client -- "JSON-RPC over stdio" --> tools
-    tools --> registry
-    tools --> wrappers
-    wrappers --> auth
-    auth --> east
-    auth --> west
-    west -- "StartAsyncInvoke" --> s3
-    wrappers -- "decoded image" --> disk
-```
+The spec behind the picture is [`docs/diagrams/architecture.yaml`](docs/diagrams/architecture.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
 
 A tool call resolves its model alias against the registry, picks the request shape and
 region from that entry, and sends it through a cached SDK client for that region. If the
