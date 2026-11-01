@@ -55,7 +55,7 @@ npm run lint     # tsc --noEmit
 - `src/bedrock/client.ts` -- shared region/auth config, one cached SDK client per region, and the empty-bearer-token guard.
 - `scripts/check-lifecycle.mjs` + `.github/workflows/lifecycle.yml` -- weekly (and on registry PRs) check that no registry model is Legacy or EOL on AWS.
 - `src/judge.ts` -- bedrock_judge: shuffled blind labels, judge prompt, verdict parsing, report formatting.
-- `server.json` + `.github/workflows/release.yml` -- MCP Registry metadata and the tag-triggered npm + registry publish (OIDC, no stored tokens).
+- `server.json` + `.github/workflows/release.yml` -- MCP Registry metadata and the tag-triggered npm + registry publish (OIDC, no stored tokens). The npm step skips a version npm already has, and a read-only step waits until npm serves the version before `mcp-publisher publish` (the registry rejected v0.7.1 two seconds after npm publish).
 - `src/bedrock/{converse,image,edit,video,embed}.ts` -- per-modality API wrappers (Converse / InvokeModel / StartAsyncInvoke). `image.ts` exports `firstImage` and `saveImage`, shared with `edit.ts`.
 - `src/bedrock/mantle.ts` -- bedrock-mantle Chat Completions for text entries with `"api": "mantle"` (Gemma 4); `converse()` dispatches to it after `buildConverseInput`.
 

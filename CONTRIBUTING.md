@@ -100,7 +100,9 @@ publishes to npm, then publishes `server.json` to the official MCP Registry. Nei
 uses a stored token: npm uses trusted publishing (GitHub OIDC, provenance attached) and
 `mcp-publisher login github-oidc` uses the same OIDC token, which proves ownership of the
 `io.github.Sagargupta16/*` namespace. The npm step is skipped when npm already has the
-version, so a rerun after a failed registry step goes straight to the registry.
+version, so a rerun after a failed registry step goes straight to the registry. Between
+the two, the job waits (up to 10 minutes) until npm serves the new version, because the
+registry rejects a version npm does not show yet.
 
 One-time setup, done by the maintainer:
 
