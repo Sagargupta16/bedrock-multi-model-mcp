@@ -215,24 +215,23 @@ You can also pass any valid Bedrock model ID directly. Note: many foundation mod
 - AWS credentials configured (bearer token, env vars, `~/.aws/credentials`, SSO, or IAM role)
 - Bedrock model access enabled in your AWS account (request access in the AWS Console under Bedrock > Model access)
 
-### Install and Build
+### Install
 
-```bash
-git clone https://github.com/Sagargupta16/bedrock-multi-model-mcp.git
-cd bedrock-multi-model-mcp
-npm install
-npm run build
-```
+The server is published on npm as
+[`bedrock-multi-model-mcp`](https://www.npmjs.com/package/bedrock-multi-model-mcp) and listed
+on the [MCP Registry](https://registry.modelcontextprotocol.io/) as
+`io.github.Sagargupta16/bedrock-multi-model-mcp`, so an MCP client can start it with `npx`
+and nothing has to be cloned or built.
 
 ### Configure in Claude Code
 
-One command, from the clone directory:
+One command:
 
 ```bash
 claude mcp add --transport stdio --scope user bedrock \
   --env AWS_REGION=us-east-1 \
   --env AWS_BEARER_TOKEN_BEDROCK=ABSK... \
-  -- node "$(pwd)/dist/index.js"
+  -- npx -y bedrock-multi-model-mcp
 ```
 
 Or add it by hand to your Claude Code MCP settings (`~/.claude.json`):
@@ -241,8 +240,8 @@ Or add it by hand to your Claude Code MCP settings (`~/.claude.json`):
 {
   "mcpServers": {
     "bedrock": {
-      "command": "node",
-      "args": ["/path/to/bedrock-multi-model-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "bedrock-multi-model-mcp"],
       "env": {
         "AWS_BEARER_TOKEN_BEDROCK": "ABSK...",
         "AWS_REGION": "us-east-1"
@@ -263,8 +262,8 @@ Same server block, in `claude_desktop_config.json`:
 {
   "mcpServers": {
     "bedrock": {
-      "command": "node",
-      "args": ["/path/to/bedrock-multi-model-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "bedrock-multi-model-mcp"],
       "env": {
         "AWS_BEARER_TOKEN_BEDROCK": "ABSK...",
         "AWS_REGION": "us-east-1",
@@ -273,6 +272,18 @@ Same server block, in `claude_desktop_config.json`:
     }
   }
 }
+```
+
+### Run from source
+
+To change the server or pin it to a local build, clone and build it, then point the MCP
+config at `node /path/to/bedrock-multi-model-mcp/dist/index.js` instead of `npx`:
+
+```bash
+git clone https://github.com/Sagargupta16/bedrock-multi-model-mcp.git
+cd bedrock-multi-model-mcp
+npm install
+npm run build
 ```
 
 Set `BEDROCK_MCP_OUTPUT_DIR` explicitly for Desktop: on Windows it spawns the server

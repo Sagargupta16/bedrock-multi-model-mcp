@@ -20,7 +20,7 @@ Public OSS (MIT), published from `github.com/Sagargupta16/bedrock-multi-model-mc
 - **Framework**: `@modelcontextprotocol/sdk` (stdio transport) + `@aws-sdk/client-bedrock-runtime` v3, Zod v4 for data validation
 - **Database**: none
 - **Package manager**: npm (package-lock.json committed)
-- **Deploy target**: local install / npm-publishable (`bin` -> `dist/index.js`)
+- **Deploy target**: npm `bedrock-multi-model-mcp` (`bin` -> `dist/index.js`, run with `npx -y`) and the MCP Registry, both published by `release.yml` on a `v*` tag
 
 ## Run
 
@@ -80,7 +80,7 @@ npm run lint     # tsc --noEmit
 
 ## Install              (CLI / tool)
 
-- `npm install && npm run build`, then register in MCP settings: `node /path/to/dist/index.js` with `AWS_BEARER_TOKEN_BEDROCK` + `AWS_REGION` in `env`.
+- Published on npm since 0.7.0: register `npx -y bedrock-multi-model-mcp` in MCP settings with `AWS_BEARER_TOKEN_BEDROCK` + `AWS_REGION` in `env`. From source: `npm install && npm run build`, then `node /path/to/dist/index.js`.
 
 ## Usage                (CLI / tool)
 
