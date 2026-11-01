@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2026-11-01
+
+### Changed
+
+- README setup installs from npm: `claude mcp add ... -- npx -y bedrock-multi-model-mcp` and an `npx` server block for Claude Code and Claude Desktop, instead of cloning and building. Building from source moved to "Run from source".
+- First release through `release.yml` with the npm trusted publisher (GitHub OIDC, no token), so this version carries npm provenance; 0.7.0 was published by hand.
+
 ## [0.7.0] - 2026-11-01
 
 ### Added
