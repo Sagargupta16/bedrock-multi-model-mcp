@@ -65,6 +65,7 @@ All notable changes to this project will be documented in this file.
 
 - One `loadRegistry` and `indexByAlias` in `src/models.ts` replace the four copies of registry loading and alias indexing. One `errorResult` in `src/index.ts` replaces six copies of the error branch. `firstImage` and `saveImage` in `src/bedrock/image.ts` are shared by image generation and editing.
 - Examples in the tool descriptions, README and scripts use `kimi` instead of `llama4`. The `effort` and `schema` descriptions list the models that take them.
+- `release.yml` skips `npm publish` when npm already has the version. The first version is published by hand (npm attaches a trusted publisher only to an existing package), so its tag now goes on to the MCP Registry step, and a rerun after a failed registry step no longer stops at npm. `package.json` `repository.url` uses the `git+https` form npm normalizes to, so `npm publish` no longer auto-corrects it.
 
 ## [0.6.0] - 2026-10-21
 
