@@ -1,0 +1,117 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Sagargupta16/orrery/main/skills/orrery/references/diagram.schema.json
+# Rendered with orrery (github.com/Sagargupta16/orrery):
+#   orrery render docs/diagrams/architecture.yaml -o docs/diagrams/architecture -f svg --theme both
+# Reviewed at README width: orrery review docs/diagrams/architecture.yaml --width 880
+title: How a tool call reaches Bedrock
+subtitle: One stdio MCP server, one cached SDK client per region, and a bearer-token HTTPS retry only on auth errors
+direction: down
+layout: { spacing: compact }
+legend:
+  dashed: Asynchronous video job
+
+groups:
+  server:
+    type: box
+    label: bedrock-multi-model-mcp
+    icon: logos:nodejs-icon
+    evidence: src/index.ts:22#McpServer
+  cloud:
+    type: aws:cloud
+    label: AWS Cloud
+  east:
+    type: aws:region
+    label: us-east-1
+    in: cloud
+    evidence: src/bedrock/client.ts:9#us-east-1
+  west:
+    type: aws:region
+    label: us-west-2
+    in: cloud
+    evidence:
+      - src/data/image-models.json:7#us-west-2
+      - src/data/video-models.json:7#us-west-2
+
+nodes:
+  client:
+    icon: logos:claude-icon
+    label: MCP client
+    note: Claude Code, Claude Desktop, any client
+    evidence: src/index.ts:452#StdioServerTransport
+  tools:
+    icon: logos:model-context-protocol-icon
+    label: 8 MCP tools
+    note: index.ts, Zod input schemas
+    in: server
+    evidence: src/index.ts:47#registerTool
+  registry:
+    icon: tabler:json
+    label: Model registries
+    note: src/data/*.json, Zod-checked at load
+    in: server
+    evidence:
+      - src/models.ts:16#TEXT_MODELS
+      - src/bedrock/image.ts:14#IMAGE_MODELS
+      - src/bedrock/video.ts:18#VIDEO_MODELS
+      - src/bedrock/embed.ts:12#EMBEDDING_MODELS
+  wrappers:
+    icon: github:code
+    label: API wrappers
+    note: converse, image, video, embed
+    in: server
+    evidence:
+      - src/bedrock/converse.ts:129#converse
+      - src/bedrock/image.ts:148#generateImage
+      - src/bedrock/video.ts:71#startVideoGeneration
+      - src/bedrock/embed.ts:47#embed
+  sdk:
+    icon: tabler:key
+    label: Bedrock client
+    note: per region, bearer retry on auth errors
+    in: server
+    evidence:
+      - src/bedrock/client.ts:15#getClient
+      - src/bedrock/client.ts:49#withBearerFallback
+      - src/bedrock/client.ts:72#bedrockFetch
+  bedrock-east:
+    icon: aws:bedrock
+    label: Amazon Bedrock
+    note: Converse, embeddings; AWS_REGION
+    in: east
+    evidence:
+      - src/bedrock/converse.ts:139#getClient
+      - src/bedrock/embed.ts:34#getClient
+  bedrock-west:
+    icon: aws:bedrock
+    label: Amazon Bedrock
+    note: Stability images, Luma Ray 2
+    in: west
+    evidence:
+      - src/bedrock/image.ts:165#getClient
+      - src/bedrock/video.ts:93#getClient
+  bucket:
+    icon: aws:simple-storage-service-bucket
+    label: Video output bucket
+    note: the s3_uri argument
+    in: west
+    evidence:
+      - src/bedrock/video.ts:90#s3OutputDataConfig
+      - src/index.ts:319#us-west-2
+    align: bedrock-west
+  disk:
+    icon: ph:file-image
+    label: Local PNG files
+    note: output_dir, env var or cwd
+    evidence:
+      - src/bedrock/image.ts:198#writeFile
+      - src/bedrock/image.ts:75#BEDROCK_MCP_OUTPUT_DIR
+
+edges:
+  - client -> tools: { label: JSON-RPC over stdio, evidence: "src/index.ts:453#connect" }
+  - tools -> registry: { label: list models, evidence: "src/index.ts:221#TEXT_MODELS" }
+  - tools -> wrappers
+  - wrappers -> registry: { label: "alias, region, request shape", evidence: "src/bedrock/image.ts:149#getImageModel" }
+  - wrappers -> sdk
+  - sdk -> bedrock-east: { label: "Converse, InvokeModel", evidence: "src/bedrock/converse.ts:139#ConverseCommand" }
+  - sdk -> bedrock-west: { label: "InvokeModel, StartAsyncInvoke", evidence: "src/bedrock/video.ts:86#StartAsyncInvokeCommand" }
+  - bedrock-west --> bucket: { label: writes MP4, evidence: "src/index.ts:379#output.mp4" }
+  - wrappers -> disk: { label: decoded PNG, evidence: "src/bedrock/image.ts:198#writeFile" }
