@@ -65,7 +65,12 @@ Before a new model ID lands:
    the alias resolves to the ID you intended. Bare-tier aliases (`claude-sonnet`,
    `fable`) track the current model in that tier; version-pinned aliases
    (`claude-sonnet-4.6`) keep the older model reachable.
-5. **Only ACTIVE models.** Entries that AWS or the provider has marked Legacy or
+5. **Pick the API.** A text model that Bedrock serves only on the OpenAI-compatible
+   `bedrock-mantle` endpoint (no Converse, per its AWS model card) gets `"api": "mantle"`;
+   probe it over Chat Completions at `https://bedrock-mantle.<region>.api.aws/openai/v1`
+   with the Bedrock API key as the bearer token, with `max_tokens` large enough that a
+   reasoning model has room to answer.
+6. **Only ACTIVE models.** Entries that AWS or the provider has marked Legacy or
    end-of-life get removed, not kept for compatibility: AWS blocks new customers from
    Legacy models months before their EOL date. Run `npm run lifecycle`, which checks
    every registry id against AWS's public lifecycle page with no credentials; CI runs it

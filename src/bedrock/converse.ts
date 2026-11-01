@@ -9,6 +9,7 @@ import {
 import { resolveModelId, getModelInfo, TEXT_MODELS } from "../models.js";
 import type { EffortLevel } from "../types.js";
 import { getClient } from "./client.js";
+import { mantleChat } from "./mantle.js";
 
 export interface ConverseOptions {
   modelId: string;
@@ -34,6 +35,9 @@ export interface ConverseResult {
   // Parsed reply, set when a schema was sent and the reply held valid JSON.
   json?: unknown;
 }
+
+// What either text API (Converse or bedrock-mantle) returns for one call.
+export type ModelReply = Pick<ConverseResult, "text" | "inputTokens" | "outputTokens" | "stopReason">;
 
 function supportedBy(flag: (m: (typeof TEXT_MODELS)[number]) => boolean): string {
   return TEXT_MODELS.filter(flag).map((m) => m.name).join(", ");
@@ -125,21 +129,30 @@ export async function converse(options: ConverseOptions): Promise<ConverseResult
   const input = buildConverseInput(options);
   const start = Date.now();
 
-  // The SDK handles both IAM credentials and the bearer token (it reads
-  // AWS_BEARER_TOKEN_BEDROCK natively).
-  const response = await getClient().send(new ConverseCommand(input), {
-    abortSignal: options.signal,
-  });
-
-  const text = response.output?.message?.content?.map((b) => b.text ?? "").join("") ?? "";
+  const reply =
+    getModelInfo(input.modelId)?.api === "mantle"
+      ? await mantleChat(input, options.signal)
+      : await converseRuntime(input, options.signal);
 
   return {
     modelId: input.modelId,
-    text,
+    ...reply,
+    latencyMs: Date.now() - start,
+    json: options.schema ? parseJsonReply(reply.text) : undefined,
+  };
+}
+
+// The SDK handles both IAM credentials and the bearer token (it reads
+// AWS_BEARER_TOKEN_BEDROCK natively).
+async function converseRuntime(
+  input: ConverseCommandInput,
+  signal?: AbortSignal,
+): Promise<ModelReply> {
+  const response = await getClient().send(new ConverseCommand(input), { abortSignal: signal });
+  return {
+    text: response.output?.message?.content?.map((b) => b.text ?? "").join("") ?? "",
     inputTokens: response.usage?.inputTokens ?? 0,
     outputTokens: response.usage?.outputTokens ?? 0,
     stopReason: response.stopReason ?? "unknown",
-    latencyMs: Date.now() - start,
-    json: options.schema ? parseJsonReply(text) : undefined,
   };
 }

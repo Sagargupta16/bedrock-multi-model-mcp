@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { converse, effortFor, type ConverseResult } from "./bedrock/converse.js";
 import { generateImage, getImageModel } from "./bedrock/image.js";
+import { editImage, EDIT_MODELS, STYLE_PRESETS, EDIT_ASPECT_RATIOS, OUTPUT_FORMATS } from "./bedrock/edit.js";
 import { startVideoGeneration, getVideoStatus } from "./bedrock/video.js";
 import { embed, cosineSimilarity, getEmbeddingModel } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
@@ -26,12 +27,13 @@ const server = new McpServer({
 
 const effortParam = z.enum(EFFORT_LEVELS).optional().describe(
   "Thinking depth and token spend for models that take it (Claude except Haiku 4.5, GPT-6.1, Grok 4.7, " +
-  "Kimi K3): low, medium, high, xhigh, max. Claude Opus 5.5 and Haiku 5.5 default to medium. bedrock_ask " +
-  "rejects it for other models; bedrock_compare and bedrock_judge apply it only to the models that take it."
+  "Kimi K3, Gemma 4 up to xhigh): low, medium, high, xhigh, max. Claude Opus 5.5 and Haiku 5.5 default to " +
+  "medium. bedrock_ask rejects it for other models; bedrock_compare and bedrock_judge apply it only to the " +
+  "models that take it."
 );
 const schemaParam = z.record(z.string(), z.unknown()).optional().describe(
   "JSON schema the reply must match (structured output). Object schemas need additionalProperties: false. " +
-  "Supported by Claude, GPT-6.1, GPT-OSS, Grok 4.7, Kimi K3, Mistral Large 3, Ministral 3, Qwen3, " +
+  "Supported by Claude, GPT-6.1, GPT-OSS, Grok 4.7, Kimi K3, Gemma 4, Mistral Large 3, Ministral 3, Qwen3, " +
   "DeepSeek V3.2, MiniMax M2.5 and Nemotron 3 Super; not by Nova, Pixtral or Magistral Small."
 );
 const maxTokensParam = z.number().int().positive().optional();
@@ -56,7 +58,7 @@ server.registerTool(
   {
     description:
       "Send a prompt to any AWS Bedrock model via the Converse API. " +
-      "Supports Claude, GPT, Grok, Kimi, Mistral, Nova, Qwen, DeepSeek, and more. " +
+      "Supports Claude, GPT, Grok, Kimi, Gemma, Mistral, Nova, Qwen, DeepSeek, and more. " +
       "Use short aliases (e.g. 'claude-sonnet', 'nova-pro') or full model IDs. " +
       "Pass schema to get JSON that matches it, and effort to set the thinking depth.",
     inputSchema: {
@@ -310,6 +312,101 @@ server.registerTool(
         `${size}Latency: ${(result.latencyMs / 1000).toFixed(1)}s\n\n` +
         `Saved to: \`${result.filePath}\``;
 
+      return { content: [{ type: "text" as const, text }] };
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+// --- Tool: bedrock_edit_image ---
+// Edit or transform a local image with one of Stability AI's image services.
+const editOperations = EDIT_MODELS.map((m) => m.operation) as [string, ...string[]];
+const editOperationHelp = EDIT_MODELS.map((m) => {
+  const needs: string[] = m.requires.map((f) => (f === "style_image" ? "style_image_path" : f));
+  if (m.requiresOneOf) needs.push(`one of ${m.requiresOneOf.join("/")}`);
+  return `${m.operation}${needs.length ? ` (needs ${needs.join(", ")})` : ""}`;
+}).join("; ");
+
+server.registerTool(
+  "bedrock_edit_image",
+  {
+    description:
+      "Edit or transform a local image with Stability AI Image Services on AWS Bedrock: fill or erase a masked " +
+      "area, extend the canvas, swap or recolor an object found by a prompt, remove the background, upscale, " +
+      "draw from a sketch or structure, or apply a style. Saves the result as a PNG, like bedrock_generate_image.",
+    inputSchema: {
+      operation: z.enum(editOperations).describe(`What to do: ${editOperationHelp}`),
+      image_path: z.string().describe(
+        "Input image (PNG, JPEG or WebP), absolute or relative to cwd. For style-transfer, the image to restyle."
+      ),
+      prompt: z.string().optional().describe("What the output should show"),
+      negative_prompt: z.string().optional().describe("What to keep out of the output"),
+      mask_path: z.string().optional().describe(
+        "inpaint, erase: black-and-white mask image, white where the image should change. " +
+        "Without it, the input image's alpha channel is used as the mask."
+      ),
+      style_image_path: z.string().optional().describe("style-transfer: the image whose style is applied"),
+      search_prompt: z.string().optional().describe("search-replace: the object to find and replace"),
+      select_prompt: z.string().optional().describe("search-recolor: the object to find and recolor"),
+      left: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add on the left"),
+      right: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add on the right"),
+      up: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add on top"),
+      down: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add at the bottom"),
+      creativity: z.number().min(0.1).max(1).optional().describe(
+        "upscale-conservative and upscale-creative (0.1-0.5), outpaint (0.1-1): how much new detail to invent"
+      ),
+      control_strength: z.number().min(0).max(1).optional().describe(
+        "control-sketch, control-structure: how closely the output follows the input (default 0.7)"
+      ),
+      grow_mask: z.number().int().min(0).max(20).optional().describe(
+        "inpaint, erase, search-replace, search-recolor: pixels to grow and soften the mask edge (default 5)"
+      ),
+      fidelity: z.number().min(0).max(1).optional().describe(
+        "style-guide: how closely the output follows the input image's style (default 0.5)"
+      ),
+      aspect_ratio: z.enum(EDIT_ASPECT_RATIOS).optional().describe("style-guide: output aspect ratio (default 1:1)"),
+      composition_fidelity: z.number().min(0).max(1).optional().describe(
+        "style-transfer: how closely the output keeps the input's composition (default 0.9)"
+      ),
+      style_strength: z.number().min(0).max(1).optional().describe(
+        "style-transfer: how strongly the style image applies (default 1)"
+      ),
+      change_strength: z.number().min(0.1).max(1).optional().describe(
+        "style-transfer: how much the input may change (default 0.9)"
+      ),
+      style_preset: z.enum(STYLE_PRESETS).optional().describe("Style preset, for the operations that take one"),
+      seed: z.number().int().min(0).max(4294967294).optional().describe("Random seed for reproducible results"),
+      output_format: z.enum(OUTPUT_FORMATS).optional().describe(
+        "Result file format (default png; webp for the three upscale operations, whose PNG is over " +
+        "Bedrock's 16 MB response limit)"
+      ),
+      output_dir: z.string().optional().describe(
+        "Directory to save the image, as in bedrock_generate_image (BEDROCK_MCP_OUTPUT_DIR, cwd or ~/bedrock-images)"
+      ),
+    },
+    annotations: { openWorldHint: true },
+  },
+  async (
+    { operation, image_path, mask_path, style_image_path, output_format, output_dir, ...fields },
+    { signal },
+  ) => {
+    try {
+      const result = await editImage({
+        operation,
+        imagePath: image_path,
+        maskPath: mask_path,
+        styleImagePath: style_image_path,
+        fields,
+        outputFormat: output_format,
+        outputDir: output_dir,
+        signal,
+      });
+      const size =
+        result.width && result.height ? `Size: ${result.width}x${result.height} | ` : "";
+      const text = `**${result.modelName}** - Image edited\n` +
+        `${size}Latency: ${(result.latencyMs / 1000).toFixed(1)}s\n\n` +
+        `Saved to: \`${result.filePath}\``;
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
       return errorResult(err);

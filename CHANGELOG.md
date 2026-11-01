@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- `bedrock_edit_image` tool for the 13 Stability AI Image Services on Bedrock (`us.stability.*` profiles, us-west-2): `inpaint`, `outpaint`, `erase`, `remove-background`, `search-replace`, `search-recolor`, `upscale-fast`, `upscale-conservative`, `upscale-creative`, `control-sketch`, `control-structure`, `style-guide`, `style-transfer`.
+  - The tool takes a local PNG, JPEG or WebP (`image_path`, plus `mask_path` or `style_image_path` where the service uses one) and saves the result as a PNG, the same way `bedrock_generate_image` does.
+  - Each service's required and optional fields live in `src/data/image-edit-models.json`. A missing or unsupported field is refused before the billed call, and so is a file that is not one of those image formats.
+  - Every operation was live-probed on 2026-11-01.
+  - The three upscalers return 4x images whose PNG is 22 to 43 MB, over Bedrock's 16 MB response limit, so they default to WebP (about 2.5 to 5.5 MB). `output_format` overrides this per call.
+- Gemma 4 31B (`gemma`), Gemma 4 26B A4B (`gemma-4-26b`) and Gemma 4 E2B (`gemma-4-e2b`), served only on Bedrock's OpenAI-compatible `bedrock-mantle` endpoint.
+  - A new `"api": "mantle"` registry field routes them to `src/bedrock/mantle.ts`, which calls Chat Completions at `https://bedrock-mantle.<region>.api.aws/openai/v1`. The request is built by the same `buildConverseInput`, so option checks, output caps and temperature rules match, and compare and judge mix them with Converse models.
+  - Probed on 2026-11-01:
+    - plain calls, `temperature`, system prompts and a JSON schema (`response_format`) all answered;
+    - `effort` (`reasoning_effort`) takes `low` to `xhigh`, while `max` gets a 400 ("not supported with this model");
+    - an abort at 400 ms settled at 411 ms.
+  - These models need `AWS_BEARER_TOKEN_BEDROCK`. AWS also accepts SigV4 on mantle, but this server does not sign mantle requests and says so when the token is missing.
+  - Grok 4.3, also mantle-only, is left out because Grok 4.7 supersedes it.
 - Nine text models, each live-probed on 2026-11-01 for a plain call, `temperature`, `schema` and `effort` before it was added:
   - GPT-6.1 Sol (`gpt-sol`) and GPT-6.1 Terra (`gpt-terra`), Grok 4.7 (`grok`) and Kimi K3 (`kimi`). All four take `schema` and `effort` and reject `temperature` ("This model doesn't support the temperature field"), so they are flagged `noTemperature`.
   - MiniMax M2.5 (`minimax`), Nemotron 3 Super 120B (`nemotron`), Ministral 3 14B (`ministral`) and Qwen3 Next 80B A3B (`qwen-next`). These take `schema` and `temperature`, not `effort`.
@@ -39,7 +52,7 @@ All notable changes to this project will be documented in this file.
 - Two images finished in the same millisecond overwrote each other. File names now end in an 8-character random suffix.
 - `max_tokens` on `bedrock_ask`, `bedrock_compare` and `bedrock_judge` accepted fractions, and `seed` on `bedrock_generate_image` accepted fractions and negatives, all of which Bedrock then rejected. The tool schemas now refuse them.
 - Titan embeddings ran one request after another (50 texts, 50 round trips in a row). They now run 8 at a time.
-- `server.json` described 26 text models; the registry has 30.
+- `server.json` described 26 text models; the registry has 33 now.
 
 ### Security
 
@@ -50,7 +63,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- One `loadRegistry` and `indexByAlias` in `src/models.ts` replace the four copies of registry loading and alias indexing. One `errorResult` in `src/index.ts` replaces six copies of the error branch.
+- One `loadRegistry` and `indexByAlias` in `src/models.ts` replace the four copies of registry loading and alias indexing. One `errorResult` in `src/index.ts` replaces six copies of the error branch. `firstImage` and `saveImage` in `src/bedrock/image.ts` are shared by image generation and editing.
 - Examples in the tool descriptions, README and scripts use `kimi` instead of `llama4`. The `effort` and `schema` descriptions list the models that take them.
 
 ## [0.6.0] - 2026-10-21

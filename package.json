@@ -2,7 +2,7 @@
   "name": "bedrock-multi-model-mcp",
   "version": "0.7.0",
   "mcpName": "io.github.Sagargupta16/bedrock-multi-model-mcp",
-  "description": "MCP server for AWS Bedrock - text, image, video, and embeddings across Claude, GPT, Grok, Kimi, Mistral, Nova, Qwen, DeepSeek and more",
+  "description": "MCP server for AWS Bedrock - text, image generation and editing, video, and embeddings across Claude, GPT, Grok, Kimi, Gemma, Mistral, Nova, Qwen, DeepSeek and more",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -31,6 +31,9 @@
     "bedrock",
     "grok",
     "kimi",
+    "gemma",
+    "stability-ai",
+    "image-editing",
     "mistral",
     "nova",
     "qwen",

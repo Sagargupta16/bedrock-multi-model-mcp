@@ -44,19 +44,20 @@ npm run lint     # tsc --noEmit
 
 ## Entry points
 
-- `src/index.ts` -- MCP server: tool registration (bedrock_ask, bedrock_compare, bedrock_judge, bedrock_list_models, bedrock_generate_image, bedrock_generate_video, bedrock_video_status, bedrock_embed_similarity), stdio transport.
+- `src/index.ts` -- MCP server: tool registration (bedrock_ask, bedrock_compare, bedrock_judge, bedrock_list_models, bedrock_generate_image, bedrock_edit_image, bedrock_generate_video, bedrock_video_status, bedrock_embed_similarity), stdio transport.
 - `scripts/call-tool.mjs` -- stdio MCP client for smoke tests; `scripts/benchmark.mjs` -- latency benchmark that also rewrites the README block between `<!-- benchmark:start -->` and `<!-- benchmark:end -->` (do not hand-edit that block).
 
 ## Key files
 
-- `src/data/*.json` -- model registries (text/image/video/embedding). Source of truth for the catalog; edit these to add/remove models, not code.
+- `src/data/*.json` -- model registries (text/image/image-edit/video/embedding). Source of truth for the catalog; edit these to add/remove models, not code. `image-edit-models.json` also declares each Stability edit service's required and optional body fields, which `buildEditBody` in `src/bedrock/edit.ts` enforces before the call.
 - `src/models.ts` -- loads + validates registry data, resolves aliases.
 - `src/types.ts` -- Zod schemas the registries are validated against at load time.
 - `src/bedrock/client.ts` -- shared region/auth config, one cached SDK client per region, and the empty-bearer-token guard.
 - `scripts/check-lifecycle.mjs` + `.github/workflows/lifecycle.yml` -- weekly (and on registry PRs) check that no registry model is Legacy or EOL on AWS.
 - `src/judge.ts` -- bedrock_judge: shuffled blind labels, judge prompt, verdict parsing, report formatting.
 - `server.json` + `.github/workflows/release.yml` -- MCP Registry metadata and the tag-triggered npm + registry publish (OIDC, no stored tokens).
-- `src/bedrock/{converse,image,video,embed}.ts` -- per-modality API wrappers (Converse / InvokeModel / StartAsyncInvoke).
+- `src/bedrock/{converse,image,edit,video,embed}.ts` -- per-modality API wrappers (Converse / InvokeModel / StartAsyncInvoke). `image.ts` exports `firstImage` and `saveImage`, shared with `edit.ts`.
+- `src/bedrock/mantle.ts` -- bedrock-mantle Chat Completions for text entries with `"api": "mantle"` (Gemma 4); `converse()` dispatches to it after `buildConverseInput`.
 
 ## Gotchas
 
@@ -67,6 +68,8 @@ npm run lint     # tsc --noEmit
 - Regions split: text defaults to `AWS_REGION` (us-east-1); image (Stability) and video (Luma Ray 2) models live in us-west-2, and the video output S3 bucket must also be in us-west-2.
 - Many foundation models require the `us.` cross-region inference profile prefix for on-demand invocation -- registries store the verified-working form per model. Keep only ACTIVE models: Legacy entries go too, because AWS blocks new customers from them (the five that went Legacy on 2026-09-30 left in 0.7.0). `npm run lifecycle` catches new listings.
 - Structured output and effort both ride on Converse `outputConfig` (`textFormat` takes the schema as a JSON **string**; `effort` is a plain field). Registry flags `structured_output`, `effort` and `noTemperature` were measured per model on 2026-10-21, and on 2026-11-01 for the models added in 0.7.0; `buildConverseInput` rejects an unsupported option before the call, `effortFor` drops effort per model in compare/judge. A model can accept `textFormat` and ignore it (Magistral Small did), so check the reply matches the schema before flagging it. GPT-OSS prefixes its JSON with a stray `B`, handled in `parseJsonReply`.
+- bedrock-mantle (Gemma 4): Chat Completions under `/openai/v1`, not `/v1`; bearer token only here (AWS takes SigV4 too, not wired); `reasoning_effort` stops at `xhigh` (`max` is a 400); a reasoning model can spend a small `max_tokens` on thinking and return empty content with `finish_reason: length` (Grok 4.3 did at 256). Claude models stay on Converse.
+- Stability edit services (`bedrock_edit_image`) are on the `us.stability.*` profile only; the three upscalers default to webp because their 4x PNG is over the 16 MB InvokeModel response limit; Fast and Creative Upscale take at most 1,048,576 input pixels.
 - Cohere Embed v4 returns `embeddings` keyed by type (`{ float: [...] }`) even when no type is requested; v3 returned a bare array. `embed.ts` handles both.
 - Generated images land in `BEDROCK_MCP_OUTPUT_DIR`, falling back to cwd then `~/bedrock-images`.
 - CI is `.github/workflows/ci.yml`: `npm ci --ignore-scripts` + `npm run lint` + `npm test` on push to `main` and on every PR, across a Node matrix (22, 24 and 26). `.github/workflows/lifecycle.yml` runs `scripts/check-lifecycle.mjs` weekly and on PRs that touch `src/data/`. Renovate is enabled via `renovate.json`.
@@ -81,10 +84,11 @@ npm run lint     # tsc --noEmit
 
 ## Usage                (CLI / tool)
 
-- `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for thinking depth (Claude, GPT-6.1, Grok 4.7, Kimi K3).
+- `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for thinking depth (Claude, GPT-6.1, Grok 4.7, Kimi K3, Gemma 4).
 - `bedrock_compare` -- same prompt to 2-5 models side by side; takes `schema` and `effort`.
 - `bedrock_judge` -- 2-5 models answer, a judge model (default claude-opus, Opus 5.5) scores them blind and picks a winner; the verdict uses structured output when the judge supports it.
 - `bedrock_generate_image` / `bedrock_generate_video` + `bedrock_video_status` -- media generation.
+- `bedrock_edit_image` -- one of 13 Stability image services on a local image (`operation`, `image_path`); the edit services are only on the `us.stability.*` profile.
 - `bedrock_embed_similarity` -- cosine-similarity matrix across 2+ texts.
 
 ## Config               (CLI / tool)

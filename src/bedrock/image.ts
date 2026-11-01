@@ -132,11 +132,18 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
   const response = await getClient(entry?.region).send(command, { abortSignal: options.signal });
   const latencyMs = Date.now() - start;
 
-  const parsed = JSON.parse(new TextDecoder().decode(response.body)) as {
+  const saved = await saveImage(firstImage(response.body), options.outputDir);
+  return { modelId, ...saved, latencyMs };
+}
+
+// The first image of a Stability response ({ images, finish_reasons }), shared
+// by text-to-image and the image-edit services, which answer the same way.
+export function firstImage(responseBody: Uint8Array): string {
+  const parsed = JSON.parse(new TextDecoder().decode(responseBody)) as {
     images?: string[];
     error?: string;
-    // Stability (SD3.5/Core/Ultra) reports content-filter and inference
-    // failures here; a null entry means success. There is no `error` field.
+    // Stability reports content-filter and inference failures here; a null
+    // entry means success. There is no `error` field.
     finish_reasons?: (string | null)[];
   };
   if (parsed.error) throw new Error(parsed.error);
@@ -144,16 +151,26 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
   if (finishReason) throw new Error(`Image generation failed: ${finishReason}`);
   const base64 = parsed.images?.[0];
   if (!base64) throw new Error("Model returned no image data");
+  return base64;
+}
 
-  const outputDir = await resolveOutputDir(options.outputDir);
+// Saves a base64 image to the resolved output directory. The size is read back
+// for a PNG and left undefined for the other formats.
+export async function saveImage(
+  base64: string,
+  outputDirOption?: string,
+  format: "png" | "jpeg" | "webp" = "png",
+): Promise<{ filePath: string; width?: number; height?: number }> {
+  const outputDir = await resolveOutputDir(outputDirOption);
   await mkdir(outputDir, { recursive: true });
   // The suffix keeps two images finished in the same millisecond from
   // overwriting each other.
   const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
-  const filePath = join(outputDir, `${timestamp}-${randomUUID().slice(0, 8)}.png`);
-  const png = Buffer.from(base64, "base64");
-  await writeFile(filePath, png);
+  const ext = format === "jpeg" ? "jpg" : format;
+  const filePath = join(outputDir, `${timestamp}-${randomUUID().slice(0, 8)}.${ext}`);
+  const bytes = Buffer.from(base64, "base64");
+  await writeFile(filePath, bytes);
 
-  const size = readPngSize(png);
-  return { modelId, filePath, width: size?.width, height: size?.height, latencyMs };
+  const size = format === "png" ? readPngSize(bytes) : undefined;
+  return { filePath, width: size?.width, height: size?.height };
 }

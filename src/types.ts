@@ -34,6 +34,9 @@ export const TextModelSchema = z.object({
   // Accepts Converse outputConfig.effort. Measured per model: Claude Haiku 4.5 and
   // the open-weight models reject it ("This model doesn't support the effort field").
   effort: z.boolean().optional(),
+  // Which Bedrock API serves the model. "mantle" models (Gemma 4) are only on the
+  // OpenAI-compatible bedrock-mantle endpoint; everything else uses Converse.
+  api: z.enum(["converse", "mantle"]).optional(),
 });
 
 export const ImageModelSchema = z.object({
@@ -46,6 +49,53 @@ export const ImageModelSchema = z.object({
   // and wrong (a stable-core 16:9 request wrote 2016x1152 on 2026-09-06).
   // Region the model is served from; falls back to the default region.
   region: z.string().optional(),
+});
+
+// Request body fields the Stability image-edit services take besides the input
+// image (AWS "Stability AI Image Services" page). Closed set, so a typo in
+// image-edit-models.json fails at load time.
+export const EDIT_FIELDS = [
+  "prompt",
+  "negative_prompt",
+  "mask",
+  "style_image",
+  "search_prompt",
+  "select_prompt",
+  "left",
+  "right",
+  "up",
+  "down",
+  "creativity",
+  "control_strength",
+  "grow_mask",
+  "fidelity",
+  "aspect_ratio",
+  "composition_fidelity",
+  "style_strength",
+  "change_strength",
+  "style_preset",
+  "seed",
+] as const;
+export type EditField = (typeof EDIT_FIELDS)[number];
+
+export const ImageEditModelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  provider: z.string(),
+  // The tool-facing name, e.g. "inpaint"; unique across the registry.
+  operation: z.string(),
+  region: z.string(),
+  // Body field that carries the input image; Style Transfer calls it init_image.
+  imageField: z.enum(["image", "init_image"]).optional(),
+  // Fields the operation needs besides the image, and the optional ones it takes.
+  requires: z.array(z.enum(EDIT_FIELDS)),
+  accepts: z.array(z.enum(EDIT_FIELDS)),
+  // At least one of these must be non-zero (Outpaint's four directions).
+  requiresOneOf: z.array(z.enum(EDIT_FIELDS)).optional(),
+  // Result format when the caller sets none (default png). The three upscalers
+  // default to webp: their PNG is over Bedrock's 16 MB response limit (22 to
+  // 43 MB measured 2026-11-01, against 2.5 MB as webp).
+  outputFormat: z.enum(["png", "jpeg", "webp"]).optional(),
 });
 
 export const VideoModelSchema = z.object({
@@ -69,5 +119,6 @@ export const EmbeddingModelSchema = z.object({
 
 export type TextModel = z.infer<typeof TextModelSchema>;
 export type ImageModel = z.infer<typeof ImageModelSchema>;
+export type ImageEditModel = z.infer<typeof ImageEditModelSchema>;
 export type VideoModel = z.infer<typeof VideoModelSchema>;
 export type EmbeddingModel = z.infer<typeof EmbeddingModelSchema>;

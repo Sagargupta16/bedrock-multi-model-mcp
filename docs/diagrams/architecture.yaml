@@ -14,7 +14,7 @@ groups:
     type: box
     label: bedrock-multi-model-mcp
     icon: logos:nodejs-icon
-    evidence: src/index.ts:22#McpServer
+    evidence: src/index.ts:23#McpServer
   cloud:
     type: aws:cloud
     label: AWS Cloud
@@ -36,13 +36,13 @@ nodes:
     icon: logos:claude-icon
     label: MCP client
     note: Claude Code, Claude Desktop, any client
-    evidence: src/index.ts:454#StdioServerTransport
+    evidence: src/index.ts:542#StdioServerTransport
   tools:
     icon: logos:model-context-protocol-icon
-    label: 8 MCP tools
+    label: 9 MCP tools
     note: index.ts, Zod input schemas
     in: server
-    evidence: src/index.ts:54#registerTool
+    evidence: src/index.ts:55#registerTool
   registry:
     icon: tabler:json
     label: Model registries
@@ -51,16 +51,19 @@ nodes:
     evidence:
       - src/models.ts:26#TEXT_MODELS
       - src/bedrock/image.ts:11#IMAGE_MODELS
+      - src/bedrock/edit.ts:12#EDIT_MODELS
       - src/bedrock/video.ts:13#VIDEO_MODELS
       - src/bedrock/embed.ts:7#EMBEDDING_MODELS
   wrappers:
     icon: github:code
     label: API wrappers
-    note: converse, image, video, embed
+    note: converse, mantle, image, edit, video, embed
     in: server
     evidence:
-      - src/bedrock/converse.ts:124#converse
+      - src/bedrock/converse.ts:128#converse
+      - src/bedrock/mantle.ts:16#mantleChat
       - src/bedrock/image.ts:119#generateImage
+      - src/bedrock/edit.ts:100#editImage
       - src/bedrock/video.ts:65#startVideoGeneration
       - src/bedrock/embed.ts:34#embed
   sdk:
@@ -74,18 +77,20 @@ nodes:
   bedrock-east:
     icon: aws:bedrock
     label: Amazon Bedrock
-    note: Converse, embeddings; AWS_REGION
+    note: Converse, mantle, embeddings; AWS_REGION
     in: east
     evidence:
-      - src/bedrock/converse.ts:130#getClient
+      - src/bedrock/converse.ts:151#getClient
+      - src/bedrock/mantle.ts:49#bedrock-mantle
       - src/bedrock/embed.ts:26#getClient
   bedrock-west:
     icon: aws:bedrock
     label: Amazon Bedrock
-    note: Stability images, Luma Ray 2
+    note: Stability images and edits, Luma Ray 2
     in: west
     evidence:
       - src/bedrock/image.ts:132#getClient
+      - src/bedrock/edit.ts:120#getClient
       - src/bedrock/video.ts:83#getClient
   bucket:
     icon: aws:simple-storage-service-bucket
@@ -94,23 +99,24 @@ nodes:
     in: west
     evidence:
       - src/bedrock/video.ts:80#s3OutputDataConfig
-      - src/index.ts:329#us-west-2
+      - src/index.ts:417#us-west-2
     align: bedrock-west
   disk:
     icon: ph:file-image
     label: Local PNG files
     note: output_dir, env var or cwd
     evidence:
-      - src/bedrock/image.ts:155#writeFile
+      - src/bedrock/image.ts:169#writeFile
       - src/bedrock/image.ts:67#BEDROCK_MCP_OUTPUT_DIR
 
 edges:
-  - client -> tools: { label: JSON-RPC over stdio, evidence: "src/index.ts:455#connect" }
-  - tools -> registry: { label: list models, evidence: "src/index.ts:231#TEXT_MODELS" }
+  - client -> tools: { label: JSON-RPC over stdio, evidence: "src/index.ts:543#connect" }
+  - tools -> registry: { label: list models, evidence: "src/index.ts:232#TEXT_MODELS" }
   - tools -> wrappers
   - wrappers -> registry: { label: "alias, region, request shape", evidence: "src/bedrock/image.ts:120#getImageModel" }
   - wrappers -> sdk
-  - sdk -> bedrock-east: { label: "Converse, InvokeModel", evidence: "src/bedrock/converse.ts:130#ConverseCommand" }
+  - sdk -> bedrock-east: { label: "Converse, InvokeModel", evidence: "src/bedrock/converse.ts:151#ConverseCommand" }
+  - wrappers -> bedrock-east: { label: "Gemma 4 over bedrock-mantle", evidence: "src/bedrock/mantle.ts:49#fetch" }
   - sdk -> bedrock-west: { label: "InvokeModel, StartAsyncInvoke", evidence: "src/bedrock/video.ts:76#StartAsyncInvokeCommand" }
-  - bedrock-west --> bucket: { label: writes MP4, evidence: "src/index.ts:388#output.mp4" }
-  - wrappers -> disk: { label: decoded PNG, evidence: "src/bedrock/image.ts:155#writeFile" }
+  - bedrock-west --> bucket: { label: writes MP4, evidence: "src/index.ts:476#output.mp4" }
+  - wrappers -> disk: { label: decoded PNG, evidence: "src/bedrock/image.ts:169#writeFile" }

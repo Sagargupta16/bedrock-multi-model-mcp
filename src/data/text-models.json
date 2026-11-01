@@ -337,6 +337,65 @@
     "maxTokens": 8192
   },
   {
+    "id": "google.gemma-4-31b",
+    "name": "Gemma 4 31B",
+    "provider": "Google",
+    "useCase": "Open-weight dense model with reasoning and vision, 256K context",
+    "aliases": [
+      "gemma",
+      "gemma-4",
+      "gemma-4-31b"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 8192,
+    "effort": true,
+    "api": "mantle"
+  },
+  {
+    "id": "google.gemma-4-26b-a4b",
+    "name": "Gemma 4 26B A4B",
+    "provider": "Google",
+    "useCase": "Open-weight mixture-of-experts (3.8B active), fast and cheap",
+    "aliases": [
+      "gemma-4-26b"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 8192,
+    "effort": true,
+    "api": "mantle"
+  },
+  {
+    "id": "google.gemma-4-e2b",
+    "name": "Gemma 4 E2B",
+    "provider": "Google",
+    "useCase": "Smallest Gemma 4 for low latency, 128K context",
+    "aliases": [
+      "gemma-4-e2b"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "tool_use",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 8192,
+    "effort": true,
+    "api": "mantle"
+  },
+  {
     "id": "us.xai.grok-4.7",
     "name": "Grok 4.7",
     "provider": "xAI",

@@ -6,20 +6,21 @@
 [![Last commit](https://img.shields.io/github/last-commit/Sagargupta16/bedrock-multi-model-mcp?style=flat-square)](https://github.com/Sagargupta16/bedrock-multi-model-mcp/commits/main)
 [![CI](https://img.shields.io/github/actions/workflow/status/Sagargupta16/bedrock-multi-model-mcp/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Sagargupta16/bedrock-multi-model-mcp/actions/workflows/ci.yml)
 
-MCP server for AWS Bedrock - text, image, video and embeddings from any model. Use Claude, GPT, Grok, Kimi, Mistral, Nova, Qwen, DeepSeek, and more from Claude Code (or any MCP client).
+MCP server for AWS Bedrock - text, image, video and embeddings from any model. Use Claude, GPT, Grok, Kimi, Gemma, Mistral, Nova, Qwen, DeepSeek, and more from Claude Code (or any MCP client).
 
-**Why:** Bedrock already gives one AWS account access to models from ten text providers,
+**Why:** Bedrock already gives one AWS account access to models from eleven text providers,
 but each one is a different model ID, inference profile, region and request shape. This
-server puts them behind eight MCP tools and one set of AWS credentials, so an agent can
+server puts them behind nine MCP tools and one set of AWS credentials, so an agent can
 ask a second model for a review, run the same prompt across five models side by side, have
-a judge model score those answers blind, or generate an image, without leaving the chat or
-writing SDK code.
+a judge model score those answers blind, or generate and edit an image, without leaving
+the chat or writing SDK code.
 
-At a glance: 30 text models from 10 providers, 3 image models, 1 video model and 3
-embedding models, all defined as data in [src/data/](src/data/) and validated at startup.
+At a glance: 33 text models from 11 providers, 3 image models, 13 image-editing services,
+1 video model and 3 embedding models, all defined as data in [src/data/](src/data/) and
+validated at startup.
 The 26 text models in the 2026-10-18 [benchmark](#benchmark) answered every call. Since
-that run, Claude Opus 5.5, Sonnet 5.5 and Haiku 5.5 and, in 0.7.0, nine models from
-OpenAI, xAI, Moonshot AI, MiniMax, NVIDIA, Mistral and Qwen joined the registry, while the
+that run, Claude Opus 5.5, Sonnet 5.5 and Haiku 5.5 and, in 0.7.0, twelve models from
+OpenAI, xAI, Moonshot AI, Google, MiniMax, NVIDIA, Mistral and Qwen joined the registry, while the
 five models AWS moved to Legacy on 2026-09-30 (Llama 4 Maverick and Scout, Llama 3.3 70B,
 Devstral 2, DeepSeek R1) left it.
 
@@ -45,15 +46,16 @@ registry, so swap `llama4` for another model to rerun it.
 | `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. The verdict comes back as schema-checked JSON when the judge supports it. |
 | `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
 | `bedrock_generate_image` | Generate images from text (Stable Image Ultra, SD3.5 Large, Stable Image Core). Saves PNG locally. |
+| `bedrock_edit_image` | Edit or transform a local image with the 13 Stability AI Image Services: inpaint, outpaint, erase, remove the background, find and replace or recolor an object, three upscalers, sketch and structure control, style guide and style transfer. Saves PNG locally. |
 | `bedrock_generate_video` | Start async video generation (Luma Ray 2). Output to S3. |
 | `bedrock_video_status` | Check video generation job progress. |
 | `bedrock_embed_similarity` | Embed 2+ texts (Titan, Cohere) and return a cosine-similarity matrix. |
 
 ## Supported Models
 
-Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.json`, `video-models.json`, `embedding-models.json`) - edit those files to add or remove models without touching code.
+Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.json`, `image-edit-models.json`, `video-models.json`, `embedding-models.json`) - edit those files to add or remove models without touching code.
 
-### Text (Converse API)
+### Text (Converse API, and bedrock-mantle for Gemma 4)
 
 | Provider | Models | Aliases |
 |----------|--------|---------|
@@ -65,13 +67,20 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 | Amazon | Nova Pro, Nova 2 Lite, Nova Lite, Nova Micro | `nova-pro`, `nova2-lite`, `nova-lite`, `nova-micro` |
 | Qwen | Qwen3 Coder Next, Qwen3 VL 235B, Qwen3 Next 80B A3B | `qwen-coder`, `qwen-vl`, `qwen-next` |
 | DeepSeek | DeepSeek V3.2 | `deepseek` |
+| Google | Gemma 4 31B, Gemma 4 26B A4B, Gemma 4 E2B (bedrock-mantle) | `gemma`, `gemma-4-26b`, `gemma-4-e2b` |
 | MiniMax | MiniMax M2.5 | `minimax` |
 | NVIDIA | Nemotron 3 Super 120B | `nemotron` |
 
+Gemma 4 is served only on Bedrock's OpenAI-compatible `bedrock-mantle` endpoint, not
+through Converse, so those entries carry `"api": "mantle"` and the server calls their
+Chat Completions API (`https://bedrock-mantle.<region>.api.aws/openai/v1`) instead. Every
+tool works with them, side by side with Converse models in `bedrock_compare` and
+`bedrock_judge`. They need `AWS_BEARER_TOKEN_BEDROCK`: AWS also accepts SigV4 on that
+endpoint, but this server does not sign mantle requests.
+
 Listed on Bedrock but not in the registry: GLM 5.3 and Claude Mythos 5.1 (access is gated
-per account; both failed the 2026-11-01 probe), and Gemma 4 and Grok 4.3 (served only on
-the OpenAI-compatible `bedrock-mantle` endpoint, not through Converse). AWS lists no
-Active Meta model.
+per account; both failed the 2026-11-01 probe), and Grok 4.3 (answers on bedrock-mantle,
+but Grok 4.7 supersedes it). AWS lists no Active Meta model.
 
 Bare-tier aliases (`fable`, `claude-opus`, `claude-sonnet`, `claude-haiku`, `gpt-sol`,
 `gpt-terra`) track the current model in that tier; version-pinned aliases (`fable-5`,
@@ -86,7 +95,8 @@ value returns a 400, so `text-models.json` marks those entries `noTemperature` a
 server omits the parameter for them - the `temperature` argument is accepted but has no
 effect. The three 5.5 models return the same 400 (probed 2026-10-21), and so do GPT-6.1
 Sol and Terra, Grok 4.7 and Kimi K3 ("This model doesn't support the temperature field",
-probed 2026-11-01). Claude Haiku 4.5, Opus 4.6 and Sonnet 4.6 still honor it, so pin
+probed 2026-11-01). Gemma 4 and the other open-weight models take it. Claude Haiku 4.5,
+Opus 4.6 and Sonnet 4.6 still honor it, so pin
 `claude-sonnet-4.6` or `claude-haiku-4.5` if you need to set it on a Claude model.
 
 The `maxTokens` value in `text-models.json` is the default output cap **this server**
@@ -102,8 +112,9 @@ Object schemas need `"additionalProperties": false`; Bedrock rejects numeric and
 length constraints (`minimum`, `maxLength` and the like) with a 400. Probed on every
 registry model (2026-10-21, and 2026-11-01 for the models added then): all 10 Claude
 models, GPT-6.1 Sol and Terra, both GPT-OSS models, Grok 4.7, Kimi K3, Mistral Large 3,
-Ministral 3, all three Qwen3 models, DeepSeek V3.2, MiniMax M2.5 and Nemotron 3 Super
-accept it (`structured_output` in `bedrock_list_models`). Nova and Pixtral answer "This
+Ministral 3, all three Qwen3 models, DeepSeek V3.2, MiniMax M2.5, Nemotron 3 Super and the
+three Gemma 4 models accept it (`structured_output` in `bedrock_list_models`; for Gemma it
+is sent as Chat Completions `response_format`). Nova and Pixtral answer "This
 model doesn't support the outputConfig field", and Magistral Small accepts the field but
 ignores the schema, so this server refuses the call before it is billed. GPT-OSS puts a
 stray character before its JSON (`B{...}`); the reply parser skips anything before the
@@ -111,7 +122,9 @@ first brace.
 
 `effort` (`low`, `medium`, `high`, `xhigh`, `max`) sets the thinking depth and token
 spend through Converse `outputConfig.effort`. Every Claude model except Haiku 4.5 takes
-it, and so do GPT-6.1 Sol and Terra, Grok 4.7 and Kimi K3 (probed 2026-11-01). Claude
+it, and so do GPT-6.1 Sol and Terra, Grok 4.7 and Kimi K3 (probed 2026-11-01). Gemma 4
+takes `low` to `xhigh` as Chat Completions `reasoning_effort` and answers `max` with a
+400 ("not supported with this model"). Claude
 Opus 5.5 and Haiku 5.5 default to `medium`, the other Claude models to `high`. On
 2026-10-21, "How many primes are below 100?" cost Haiku 5.5 3 output tokens at `low`
 and 60 at `max`, with the same answer. `bedrock_ask` rejects `effort` for a model that
@@ -131,6 +144,36 @@ Stability models take an **aspect ratio**, not pixel dimensions. The `width` and
 `3:2`, `2:3`, `4:5`, `5:4`, `21:9`, `9:21`); the model picks the output pixels. The
 size reported by `bedrock_generate_image` is read back out of the saved PNG, so it
 is the real output size rather than what you asked for.
+
+### Image editing (InvokeModel API)
+
+`bedrock_edit_image` takes a local PNG, JPEG or WebP (`image_path`) and an `operation`.
+Each operation is one of Stability AI's image services, called through its US inference
+profile (`us.stability.*`) from us-west-2.
+
+| Operation | Service | Needs besides the image | Also takes |
+|-----------|---------|-------------------------|------------|
+| `inpaint` | Stable Image Inpaint | `prompt` | `mask_path`, `grow_mask` |
+| `outpaint` | Stable Image Outpaint | one of `left`, `right`, `up`, `down` (pixels) | `prompt`, `creativity` |
+| `erase` | Stable Image Erase Object | - | `mask_path`, `grow_mask` |
+| `remove-background` | Stable Image Remove Background | - | - |
+| `search-replace` | Stable Image Search and Replace | `prompt`, `search_prompt` | `grow_mask` |
+| `search-recolor` | Stable Image Search and Recolor | `prompt`, `select_prompt` | `grow_mask` |
+| `upscale-fast` | Stable Image Fast Upscale | - | - |
+| `upscale-conservative` | Stable Image Conservative Upscale | `prompt` | `creativity` |
+| `upscale-creative` | Stable Image Creative Upscale | `prompt` | `creativity` |
+| `control-sketch` | Stable Image Control Sketch | `prompt` | `control_strength` |
+| `control-structure` | Stable Image Control Structure | `prompt` | `control_strength` |
+| `style-guide` | Stable Image Style Guide | `prompt` | `fidelity`, `aspect_ratio` |
+| `style-transfer` | Stable Image Style Transfer | `style_image_path` | `prompt`, `composition_fidelity`, `style_strength`, `change_strength` |
+
+Most also take `negative_prompt`, `seed` and `style_preset`. A field the operation does
+not take, or a missing required one, is refused before the call is billed. Without
+`mask_path`, `inpaint` and `erase` use the input image's alpha channel as the mask. Only
+PNG, JPEG and WebP files are read and sent, so a mistyped path never ships some other
+local file to Bedrock. Each call is billed per image; Conservative and Creative Upscale
+cost several times more than the other services
+([AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/)).
 
 ### Video (Async API)
 
@@ -253,7 +296,7 @@ cwd" behavior cannot apply and generated images fall back to `~/bedrock-images/`
 The server supports two auth methods:
 
 1. **Bedrock API Key (bearer token)** - Set `AWS_BEARER_TOKEN_BEDROCK`. The AWS SDK reads it and sends it as `Authorization: Bearer`, ahead of any IAM credentials. A set-but-empty value (for example an MCP config passing `"${AWS_BEARER_TOKEN_BEDROCK}"` from a client whose own environment lacks the variable) is ignored, so the IAM chain answers instead of every call failing with "the `token` is not defined".
-2. **IAM credentials** - Standard AWS credential chain (env vars, profile, SSO, IAM role).
+2. **IAM credentials** - Standard AWS credential chain (env vars, profile, SSO, IAM role). Every model works this way except Gemma 4, whose `bedrock-mantle` endpoint this server reaches only with the bearer token.
 
 ## Usage Examples
 
@@ -304,6 +347,13 @@ generation per candidate plus one for the judge.
 "Use bedrock_generate_image with stable-ultra: A futuristic Tokyo street at night, neon lights, rain"
 ```
 
+### Edit an image
+
+```
+"Use bedrock_edit_image to remove the background from ./photo.png"
+"Use bedrock_edit_image with search-replace on ./street.png: replace the car with a blue pickup truck"
+```
+
 ### Generate a video
 
 ```
@@ -321,7 +371,7 @@ generation per candidate plus one for the judge.
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/diagrams/architecture-light.svg">
-  <img width="880" src="docs/diagrams/architecture-light.svg" alt="How a tool call reaches Bedrock: an MCP client such as Claude Code or Claude Desktop sends JSON-RPC over stdio to the 8 MCP tools of the bedrock-multi-model-mcp server, defined in index.ts with Zod input schemas. bedrock_list_models reads the model registries directly; every other tool calls an API wrapper (converse, image, video or embed), which takes the model's alias, region and request shape from the registries in src/data/*.json, checked with Zod at load. The wrapper sends the request through the Bedrock client, one cached SDK client per region, which authenticates with the bearer token or the IAM credential chain; a cancelled tool call aborts its Bedrock request. Converse and embedding calls (InvokeModel) go to Amazon Bedrock in us-east-1, or the region AWS_REGION sets. Image calls (InvokeModel, Stability) and video jobs (StartAsyncInvoke, Luma Ray 2) go to Amazon Bedrock in us-west-2, where the asynchronous video job writes the MP4 to the S3 bucket named by the s3_uri argument. The image wrapper decodes the returned image and saves it as a local PNG file in output_dir, BEDROCK_MCP_OUTPUT_DIR or the working directory.">
+  <img width="880" src="docs/diagrams/architecture-light.svg" alt="How a tool call reaches Bedrock: an MCP client such as Claude Code or Claude Desktop sends JSON-RPC over stdio to the 9 MCP tools of the bedrock-multi-model-mcp server, defined in index.ts with Zod input schemas. bedrock_list_models reads the model registries directly; every other tool calls an API wrapper (converse, image, edit, video or embed), which takes the model's alias, region and request shape from the registries in src/data/*.json, checked with Zod at load. The wrapper sends the request through the Bedrock client, one cached SDK client per region, which authenticates with the bearer token or the IAM credential chain; a cancelled tool call aborts its Bedrock request. Gemma 4 calls go from the wrappers straight to Bedrock's bedrock-mantle endpoint over HTTPS with the bearer token. Converse and embedding calls (InvokeModel) go to Amazon Bedrock in us-east-1, or the region AWS_REGION sets. Image calls (InvokeModel, Stability) and video jobs (StartAsyncInvoke, Luma Ray 2) go to Amazon Bedrock in us-west-2, where the asynchronous video job writes the MP4 to the S3 bucket named by the s3_uri argument. The image wrapper decodes the returned image and saves it as a local PNG file in output_dir, BEDROCK_MCP_OUTPUT_DIR or the working directory.">
 </picture>
 
 The spec behind the picture is [`docs/diagrams/architecture.yaml`](docs/diagrams/architecture.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
@@ -342,13 +392,16 @@ src/
   types.ts          # Zod schemas for model data validation
   bedrock/
     client.ts       # Shared region/auth config, one cached SDK client per region
-    converse.ts     # Converse API wrapper (text models)
+    converse.ts     # Converse API wrapper (text models), dispatches mantle models
+    mantle.ts       # bedrock-mantle Chat Completions wrapper (Gemma 4)
     image.ts        # InvokeModel wrapper (image models)
+    edit.ts         # InvokeModel wrapper (Stability image-edit services)
     video.ts        # Async invoke wrapper (video models)
     embed.ts        # InvokeModel wrapper (embeddings) + cosine similarity
   data/
     text-models.json       # Text model registry (data, not code)
     image-models.json      # Image model registry
+    image-edit-models.json # Image-edit service registry (operation, required and optional fields)
     video-models.json      # Video model registry
     embedding-models.json  # Embedding model registry
 scripts/
@@ -359,15 +412,17 @@ scripts/
 
 Model definitions are data, kept in `src/data/*.json` and validated against Zod schemas at load time, so the catalog can be updated without changing logic. The build copies these JSON files into `dist/data/`.
 
-- **Text**: Uses the [Converse API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html) - unified interface across all text models
+- **Text**: Uses the [Converse API](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html) - unified interface across the text models, except Gemma 4, which uses bedrock-mantle Chat Completions
 - **Image**: Uses [InvokeModel](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_InvokeModel.html) with the Stability request format (prompt and aspect ratio)
+- **Image editing**: Uses InvokeModel with the [Stability AI Image Services](https://docs.aws.amazon.com/bedrock/latest/userguide/stable-image-services.html) request format (base64 input image plus per-service fields)
 - **Video**: Uses [StartAsyncInvoke](https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_StartAsyncInvoke.html) - requires S3 bucket for output
 
 ### Design decisions
 
 | Decision | Why |
 |----------|-----|
-| Converse API for every text model | One request and response shape across all ten providers, so adding a text model is a JSON entry, not a new code path. |
+| Converse API for every text model on bedrock-runtime | One request and response shape across ten providers, so adding a text model is a JSON entry, not a new code path. |
+| Gemma 4 through bedrock-mantle, behind the same options | Gemma 4 has no Converse API. Its requests are built by the same `buildConverseInput` (option checks, output cap, temperature rules) and only the transport changes, so compare and judge mix it with Converse models. |
 | Model catalog as JSON + Zod | A malformed or half-edited registry fails at startup, not on the first call. Capabilities are a closed enum, so a typo like `tool-use` is rejected at load. |
 | Per-model `noTemperature` flag | Claude Opus 4.7 and later, GPT-6.1, Grok 4.7 and Kimi K3 return a 400 for `temperature`; the flag drops the parameter for exactly those entries. |
 | Measured `effort` and `structured_output` flags | Each was probed live on every registry model, so an unsupported option fails with the list of models that take it, before a billed call. Ids outside the registry pass through for Bedrock to judge. |
@@ -377,6 +432,8 @@ Model definitions are data, kept in `src/data/*.json` and validated against Zod 
 | Cancelled calls abort the Bedrock request | A client that gave up on a tool call should not leave the server waiting on, and paying for, an answer nobody reads. Video starts are left alone, since a cancelled start could leave a billed job with no ARN. |
 | Weekly lifecycle check | AWS blocks new customers from Legacy models months before their EOL date, so `scripts/check-lifecycle.mjs` compares the registry with AWS's lifecycle page every week and on every registry change. |
 | Image size read from the saved PNG | Stability models take an aspect ratio and choose the pixels, so echoing the requested size back would be wrong. |
+| Edit services as data, checked before the call | Each service's required and optional fields live in `image-edit-models.json`, so `bedrock_edit_image` refuses a missing or unsupported field before Bedrock bills the image. |
+| Input files checked by their first bytes | `bedrock_edit_image` reads local paths, so only a file that starts like a PNG, JPEG or WebP is sent to Bedrock. |
 | Region from the job ARN is validated | The region picks the request host, so an unchecked value from a crafted ARN could send the signed request to another server. |
 
 ## Benchmark

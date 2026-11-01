@@ -12,6 +12,7 @@ import { TextModelSchema } from "./types.js";
 import { IMAGE_MODELS, getImageModel, readPngSize } from "./bedrock/image.js";
 import { VIDEO_MODELS, getVideoModel } from "./bedrock/video.js";
 import { EMBEDDING_MODELS, getEmbeddingModel, cosineSimilarity } from "./bedrock/embed.js";
+import { EDIT_MODELS, getEditModel } from "./bedrock/edit.js";
 
 test("text registry loads and validates", () => {
   assert.ok(TEXT_MODELS.length > 0, "registry should not be empty");
@@ -68,9 +69,20 @@ test("aliases of the models added on 2026-11-01 resolve to the probed ids", () =
     ministral: "mistral.ministral-3-14b-instruct",
     magistral: "mistral.magistral-small-2509",
     "qwen-next": "qwen.qwen3-next-80b-a3b",
+    gemma: "google.gemma-4-31b",
+    "gemma-4-26b": "google.gemma-4-26b-a4b",
+    "gemma-4-e2b": "google.gemma-4-e2b",
   };
   for (const [alias, id] of Object.entries(expected)) {
     assert.equal(resolveModelId(alias), id, `${alias} alias`);
+  }
+});
+
+test("only the Gemma 4 entries are served through bedrock-mantle", () => {
+  // AWS model cards (read 2026-11-01): Gemma 4 is on bedrock-mantle only, with no
+  // Converse support; every other registry model answers through Converse.
+  for (const m of TEXT_MODELS) {
+    assert.equal(m.api === "mantle", m.provider === "Google", `${m.id} api`);
   }
 });
 
@@ -87,13 +99,17 @@ test("version-pinned aliases keep the previous generation reachable", () => {
 test("effort is flagged exactly on the models that accepted it live", () => {
   // Probed live with Converse outputConfig.effort: every Claude entry except
   // Haiku 4.5 answered on 2026-10-21, and GPT-6.1 Sol and Terra, Grok 4.7 and
-  // Kimi K3 answered on 2026-11-01. Haiku 4.5 and every other model returned
-  // "This model doesn't support the effort field".
+  // Kimi K3 answered on 2026-11-01. Haiku 4.5 and every other Converse model
+  // returned "This model doesn't support the effort field". The Gemma 4 models
+  // (bedrock-mantle reasoning_effort) took low to xhigh on 2026-11-01.
   const accepted = new Set([
     "us.openai.gpt-6.1-sol",
     "us.openai.gpt-6.1-terra",
     "us.xai.grok-4.7",
     "us.moonshotai.kimi-k3",
+    "google.gemma-4-31b",
+    "google.gemma-4-26b-a4b",
+    "google.gemma-4-e2b",
   ]);
   for (const m of TEXT_MODELS) {
     const expected =
@@ -163,6 +179,9 @@ test("noTemperature is set exactly on the entries that rejected temperature live
     "mistral.ministral-3-14b-instruct",
     "mistral.magistral-small-2509",
     "qwen.qwen3-next-80b-a3b",
+    "google.gemma-4-31b",
+    "google.gemma-4-26b-a4b",
+    "google.gemma-4-e2b",
   ]) {
     assert.notEqual(
       getModelInfo(id)?.noTemperature,
@@ -216,7 +235,7 @@ test("registries contain no AWS-legacy models", () => {
   // caught by scripts/check-lifecycle.mjs, which reads the live AWS page.
   const legacy =
     /nova-canvas|nova-reel|titan-image|jamba-1-5|nova-premier|llama4-maverick|llama4-scout|llama3-3-70b|devstral-2|deepseek\.r1/;
-  for (const m of [...IMAGE_MODELS, ...VIDEO_MODELS, ...TEXT_MODELS, ...EMBEDDING_MODELS]) {
+  for (const m of [...IMAGE_MODELS, ...EDIT_MODELS, ...VIDEO_MODELS, ...TEXT_MODELS, ...EMBEDDING_MODELS]) {
     assert.ok(!legacy.test(m.id), `${m.id} is AWS-legacy and must not ship`);
   }
 });
@@ -225,6 +244,22 @@ test("image models declare the region they are served from", () => {
   for (const m of IMAGE_MODELS) {
     assert.equal(m.region, "us-west-2", `${m.id} is only served from us-west-2`);
   }
+});
+
+test("image-edit registry holds the 13 Stability image services on their US profile", () => {
+  // AWS lists 13 Stability AI Image Services (model cards read 2026-11-01). They
+  // are served only through the US geo inference profile, so every id is us.-prefixed.
+  assert.equal(EDIT_MODELS.length, 13);
+  const operations = EDIT_MODELS.map((m) => m.operation);
+  assert.equal(new Set(operations).size, operations.length, "duplicate operation");
+  for (const m of EDIT_MODELS) {
+    assert.match(m.id, /^us\.stability\./, `${m.id} needs the us. profile`);
+    assert.equal(m.region, "us-west-2", `${m.id} region`);
+    assert.ok(!m.accepts.some((f) => m.requires.includes(f)), `${m.id} lists a field as both required and optional`);
+  }
+  assert.equal(getEditModel("inpaint")?.id, "us.stability.stable-image-inpaint-v1:0");
+  assert.equal(getEditModel("style-transfer")?.imageField, "init_image");
+  assert.deepEqual(getEditModel("outpaint")?.requiresOneOf, ["left", "right", "up", "down"]);
 });
 
 test("video registry loads and aliases resolve", () => {
