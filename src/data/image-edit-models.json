@@ -1,0 +1,124 @@
+[
+  {
+    "id": "us.stability.stable-image-inpaint-v1:0",
+    "name": "Stable Image Inpaint",
+    "provider": "Stability AI",
+    "operation": "inpaint",
+    "region": "us-west-2",
+    "requires": ["prompt"],
+    "accepts": ["mask", "grow_mask", "negative_prompt", "seed", "style_preset"]
+  },
+  {
+    "id": "us.stability.stable-outpaint-v1:0",
+    "name": "Stable Image Outpaint",
+    "provider": "Stability AI",
+    "operation": "outpaint",
+    "region": "us-west-2",
+    "requires": [],
+    "requiresOneOf": ["left", "right", "up", "down"],
+    "accepts": ["left", "right", "up", "down", "prompt", "creativity", "seed", "style_preset"]
+  },
+  {
+    "id": "us.stability.stable-image-erase-object-v1:0",
+    "name": "Stable Image Erase Object",
+    "provider": "Stability AI",
+    "operation": "erase",
+    "region": "us-west-2",
+    "requires": [],
+    "accepts": ["mask", "grow_mask", "seed"]
+  },
+  {
+    "id": "us.stability.stable-image-remove-background-v1:0",
+    "name": "Stable Image Remove Background",
+    "provider": "Stability AI",
+    "operation": "remove-background",
+    "region": "us-west-2",
+    "requires": [],
+    "accepts": []
+  },
+  {
+    "id": "us.stability.stable-image-search-replace-v1:0",
+    "name": "Stable Image Search and Replace",
+    "provider": "Stability AI",
+    "operation": "search-replace",
+    "region": "us-west-2",
+    "requires": ["prompt", "search_prompt"],
+    "accepts": ["grow_mask", "negative_prompt", "seed", "style_preset"]
+  },
+  {
+    "id": "us.stability.stable-image-search-recolor-v1:0",
+    "name": "Stable Image Search and Recolor",
+    "provider": "Stability AI",
+    "operation": "search-recolor",
+    "region": "us-west-2",
+    "requires": ["prompt", "select_prompt"],
+    "accepts": ["grow_mask", "negative_prompt", "seed", "style_preset"]
+  },
+  {
+    "id": "us.stability.stable-fast-upscale-v1:0",
+    "name": "Stable Image Fast Upscale",
+    "provider": "Stability AI",
+    "operation": "upscale-fast",
+    "region": "us-west-2",
+    "requires": [],
+    "accepts": [],
+    "outputFormat": "webp"
+  },
+  {
+    "id": "us.stability.stable-conservative-upscale-v1:0",
+    "name": "Stable Image Conservative Upscale",
+    "provider": "Stability AI",
+    "operation": "upscale-conservative",
+    "region": "us-west-2",
+    "requires": ["prompt"],
+    "accepts": ["creativity", "negative_prompt", "seed"],
+    "outputFormat": "webp"
+  },
+  {
+    "id": "us.stability.stable-creative-upscale-v1:0",
+    "name": "Stable Image Creative Upscale",
+    "provider": "Stability AI",
+    "operation": "upscale-creative",
+    "region": "us-west-2",
+    "requires": ["prompt"],
+    "accepts": ["creativity", "negative_prompt", "seed", "style_preset"],
+    "outputFormat": "webp"
+  },
+  {
+    "id": "us.stability.stable-image-control-sketch-v1:0",
+    "name": "Stable Image Control Sketch",
+    "provider": "Stability AI",
+    "operation": "control-sketch",
+    "region": "us-west-2",
+    "requires": ["prompt"],
+    "accepts": ["control_strength", "negative_prompt", "seed", "style_preset"]
+  },
+  {
+    "id": "us.stability.stable-image-control-structure-v1:0",
+    "name": "Stable Image Control Structure",
+    "provider": "Stability AI",
+    "operation": "control-structure",
+    "region": "us-west-2",
+    "requires": ["prompt"],
+    "accepts": ["control_strength", "negative_prompt", "seed", "style_preset"]
+  },
+  {
+    "id": "us.stability.stable-image-style-guide-v1:0",
+    "name": "Stable Image Style Guide",
+    "provider": "Stability AI",
+    "operation": "style-guide",
+    "region": "us-west-2",
+    "requires": ["prompt"],
+    "accepts": ["aspect_ratio", "fidelity", "negative_prompt", "seed", "style_preset"]
+  },
+  {
+    "id": "us.stability.stable-style-transfer-v1:0",
+    "name": "Stable Image Style Transfer",
+    "provider": "Stability AI",
+    "operation": "style-transfer",
+    "region": "us-west-2",
+    "imageField": "init_image",
+    "requires": ["style_image"],
+    "accepts": ["prompt", "negative_prompt", "seed", "composition_fidelity", "style_strength", "change_strength"]
+  }
+]

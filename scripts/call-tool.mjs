@@ -5,8 +5,8 @@
 //
 //   npm run build
 //   node scripts/call-tool.mjs                       # list the tools
-//   node scripts/call-tool.mjs bedrock_list_models '{"provider":"Meta"}'
-//   node scripts/call-tool.mjs bedrock_judge '{"models":["llama4","nova-pro"],"prompt":"..."}'
+//   node scripts/call-tool.mjs bedrock_list_models '{"provider":"Mistral"}'
+//   node scripts/call-tool.mjs bedrock_judge '{"models":["kimi","nova-pro"],"prompt":"..."}'
 //
 // AWS credentials come from this shell's environment, exactly as they would
 // from the "env" block of an MCP client config.

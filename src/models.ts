@@ -8,15 +8,22 @@ import { TextModelSchema, type TextModel } from "./types.js";
 // catalog can be edited without touching code. Validated here at load time.
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), "data");
 
-function loadJson<T>(file: string, schema: z.ZodType<T[]>): T[] {
+// Loads one registry file and validates every entry, so a malformed catalog
+// fails at startup. Shared by the text, image, video and embedding registries.
+export function loadRegistry<T>(file: string, entry: z.ZodType<T>): T[] {
   const raw = readFileSync(join(dataDir, file), "utf-8");
-  return schema.parse(JSON.parse(raw));
+  return z.array(entry).parse(JSON.parse(raw));
 }
 
-export const TEXT_MODELS: TextModel[] = loadJson(
-  "text-models.json",
-  z.array(TextModelSchema),
-);
+// Lower-cased lookup key -> entry. Keys default to the entry's aliases.
+export function indexByAlias<T extends { aliases: string[] }>(
+  models: T[],
+  keys: (m: T) => string[] = (m) => m.aliases,
+): Record<string, T> {
+  return Object.fromEntries(models.flatMap((m) => keys(m).map((k) => [k.toLowerCase(), m])));
+}
+
+export const TEXT_MODELS: TextModel[] = loadRegistry("text-models.json", TextModelSchema);
 
 // id -> model
 export const MODEL_REGISTRY: Record<string, TextModel> = Object.fromEntries(

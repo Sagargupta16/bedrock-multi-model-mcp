@@ -14,16 +14,20 @@ smallest set of steps that reproduces it.
 
 ## Why this matters here
 
-This server brokers AWS credentials. It reads `AWS_BEARER_TOKEN_BEDROCK` (a Bedrock API
-key) and otherwise falls back to the standard AWS credential chain - environment
-variables, `~/.aws/credentials`, a named profile, SSO, or an instance role. When the SDK
-path fails it retries over raw HTTPS with an `Authorization: Bearer` header. Anything
-that can redirect, log, or echo those requests is in scope, including:
+This server brokers AWS credentials. The AWS SDK reads `AWS_BEARER_TOKEN_BEDROCK` (a
+Bedrock API key) and sends it as an `Authorization: Bearer` header, and otherwise falls
+back to the standard AWS credential chain - environment variables, `~/.aws/credentials`,
+a named profile, SSO, or an instance role. Anything that can redirect, log, or echo those
+requests is in scope, including:
 
 - credential or token material reaching stdout, stderr, an error message, or a saved file
 - a model ID, region, ARN, or S3 URI from tool input steering a request to a host other
-  than `bedrock-runtime.<region>.amazonaws.com`
+  than `bedrock-runtime.<region>.amazonaws.com`, or `bedrock-mantle.<region>.api.aws` for
+  the Gemma 4 models, which this server calls with the bearer token
 - path traversal through `output_dir` or the generated image filename
+- `bedrock_edit_image` reading and sending a local file that is not an image: it reads
+  `image_path`, `mask_path` and `style_image_path` and sends only files that start like a
+  PNG, JPEG or WebP
 - prompt or tool input that escapes into a shell, a filesystem write outside the
   configured output directory, or another AWS API
 

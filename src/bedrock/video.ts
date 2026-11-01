@@ -3,26 +3,17 @@ import {
   GetAsyncInvokeCommand,
 } from "@aws-sdk/client-bedrock-runtime";
 import type { DocumentType } from "@smithy/types";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { z } from "zod";
+import { indexByAlias, loadRegistry } from "../models.js";
 import { VideoModelSchema, type VideoModel } from "../types.js";
-import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
+import { getClient } from "./client.js";
 
 // Video model catalog loaded and validated from src/data/video-models.json.
 // All video models are invoked asynchronously via StartAsyncInvoke with S3
 // output, but each provider has its own modelInput shape.
-const dataDir = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
-const raw = readFileSync(join(dataDir, "video-models.json"), "utf-8");
-export const VIDEO_MODELS: VideoModel[] = z
-  .array(VideoModelSchema)
-  .parse(JSON.parse(raw));
+export const VIDEO_MODELS: VideoModel[] = loadRegistry("video-models.json", VideoModelSchema);
 
 // alias -> model
-const VIDEO_ALIASES: Record<string, VideoModel> = Object.fromEntries(
-  VIDEO_MODELS.flatMap((m) => m.aliases.map((a) => [a.toLowerCase(), m])),
-);
+const VIDEO_ALIASES = indexByAlias(VIDEO_MODELS);
 
 export function getVideoModel(alias: string): VideoModel | undefined {
   return VIDEO_ALIASES[alias.toLowerCase()];
@@ -68,6 +59,9 @@ function buildLumaRayInput(options: VideoOptions, duration: number): Record<stri
   };
 }
 
+// Takes no abort signal on purpose: cancelling after the request is sent can
+// leave a billed job running with no ARN to track it, and the call itself only
+// takes a moment.
 export async function startVideoGeneration(options: VideoOptions): Promise<VideoStartResult> {
   const entry = getVideoModel(options.model ?? DEFAULT_VIDEO_MODEL);
   if (!entry && options.model) {
@@ -79,43 +73,19 @@ export async function startVideoGeneration(options: VideoOptions): Promise<Video
   const modelInput = buildLumaRayInput(options, duration);
   const effectiveDuration = duration >= 9 ? 9 : 5;
 
-  // Falls back to raw HTTP only on an auth rejection: a timeout or 5xx here
-  // may mean the job already started, and a retry would bill a second video.
-  const invocationArn = await withBearerFallback(
-    async () => {
-      const command = new StartAsyncInvokeCommand({
-        modelId: model.id,
-        modelInput: modelInput as unknown as DocumentType,
-        outputDataConfig: {
-          s3OutputDataConfig: { s3Uri: options.s3Uri },
-        },
-      });
-      const response = await getClient(model.region).send(command);
-      return response.invocationArn ?? "";
+  const command = new StartAsyncInvokeCommand({
+    modelId: model.id,
+    modelInput: modelInput as unknown as DocumentType,
+    outputDataConfig: {
+      s3OutputDataConfig: { s3Uri: options.s3Uri },
     },
-    async () => {
-      const json = (await bedrockFetch(
-        "async-invoke",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            modelId: model.id,
-            modelInput,
-            outputDataConfig: {
-              s3OutputDataConfig: { s3Uri: options.s3Uri },
-            },
-          }),
-        },
-        model.region,
-      )) as { invocationArn?: string };
-      return json.invocationArn ?? "";
-    },
-  );
+  });
+  const response = await getClient(model.region).send(command);
 
   return {
     modelId: model.id,
     modelName: model.name,
-    invocationArn,
+    invocationArn: response.invocationArn ?? "",
     s3Uri: options.s3Uri,
     durationSeconds: effectiveDuration,
     region: model.region,
@@ -125,52 +95,25 @@ export async function startVideoGeneration(options: VideoOptions): Promise<Video
 export async function getVideoStatus(
   invocationArn: string,
   region?: string,
+  signal?: AbortSignal,
 ): Promise<VideoStatusResult> {
   // The ARN embeds its region (arn:aws:bedrock:REGION:...), so callers don't
   // have to remember which region the job was started in. Validate it against
-  // the AWS region charset: the bearer-token fallback interpolates the region
-  // into the request host, so an unvalidated value (e.g. "us-east-1/@evil.com")
-  // could redirect the Authorization: Bearer header to an attacker's server.
+  // the AWS region charset before it picks the endpoint host, so a crafted ARN
+  // (e.g. "us-east-1/@evil.com") cannot point the signed request elsewhere.
   const rawRegion = invocationArn.split(":")[3];
   const arnRegion =
     rawRegion && /^[a-z]{2}(?:-[a-z]+)+-\d+$/.test(rawRegion) ? rawRegion : region;
 
-  return withBearerFallback<VideoStatusResult>(
-    async () => {
-      const command = new GetAsyncInvokeCommand({ invocationArn });
-      const response = await getClient(arnRegion).send(command);
-      return {
-        invocationArn,
-        status: response.status ?? "Unknown",
-        s3Uri: response.outputDataConfig?.s3OutputDataConfig?.s3Uri,
-        submitTime: response.submitTime?.toISOString(),
-        endTime: response.endTime?.toISOString(),
-        failureMessage: response.failureMessage,
-      };
-    },
-    async () => {
-      // Raw HTTP fallback - extract the invocation ID from the ARN
-      const parts = invocationArn.split("/");
-      const invocationId = parts[parts.length - 1];
-      const json = (await bedrockFetch(
-        `async-invoke/${encodeURIComponent(invocationId)}`,
-        { method: "GET" },
-        arnRegion,
-      )) as {
-        status?: string;
-        outputDataConfig?: { s3OutputDataConfig?: { s3Uri?: string } };
-        submitTime?: string;
-        endTime?: string;
-        failureMessage?: string;
-      };
-      return {
-        invocationArn,
-        status: json.status ?? "Unknown",
-        s3Uri: json.outputDataConfig?.s3OutputDataConfig?.s3Uri,
-        submitTime: json.submitTime,
-        endTime: json.endTime,
-        failureMessage: json.failureMessage,
-      };
-    },
-  );
+  const response = await getClient(arnRegion).send(new GetAsyncInvokeCommand({ invocationArn }), {
+    abortSignal: signal,
+  });
+  return {
+    invocationArn,
+    status: response.status ?? "Unknown",
+    s3Uri: response.outputDataConfig?.s3OutputDataConfig?.s3Uri,
+    submitTime: response.submitTime?.toISOString(),
+    endTime: response.endTime?.toISOString(),
+    failureMessage: response.failureMessage,
+  };
 }

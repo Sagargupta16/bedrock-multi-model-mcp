@@ -1,28 +1,18 @@
 import { InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { readFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { access, constants, mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
-import { dirname, isAbsolute, join, resolve } from "node:path";
-import { z } from "zod";
+import { isAbsolute, join, resolve } from "node:path";
+import { indexByAlias, loadRegistry } from "../models.js";
 import { ImageModelSchema, type ImageModel } from "../types.js";
-import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
+import { getClient } from "./client.js";
 
 // Image model catalog loaded and validated from src/data/image-models.json.
-const dataDir = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
-const raw = readFileSync(join(dataDir, "image-models.json"), "utf-8");
-export const IMAGE_MODELS: ImageModel[] = z
-  .array(ImageModelSchema)
-  .parse(JSON.parse(raw));
+export const IMAGE_MODELS: ImageModel[] = loadRegistry("image-models.json", ImageModelSchema);
 
 // alias -> model, plus id -> model so a full model ID resolves to its entry
-// (and therefore its request `format`) instead of falling through to the
-// wrong Amazon request shape.
-const IMAGE_ALIASES: Record<string, ImageModel> = Object.fromEntries(
-  IMAGE_MODELS.flatMap((m) =>
-    [...m.aliases, m.id].map((a) => [a.toLowerCase(), m]),
-  ),
-);
+// (and therefore its region) too.
+const IMAGE_ALIASES = indexByAlias(IMAGE_MODELS, (m) => [...m.aliases, m.id]);
 
 export function getImageModel(alias: string): ImageModel | undefined {
   return IMAGE_ALIASES[alias.toLowerCase()];
@@ -36,6 +26,8 @@ export interface ImageOptions {
   height?: number;
   seed?: number;
   outputDir?: string;
+  // Aborts the request when the MCP client cancels the tool call.
+  signal?: AbortSignal;
 }
 
 export interface ImageResult {
@@ -110,78 +102,48 @@ function toAspectRatio(width: number, height: number): string {
   return best[0];
 }
 
-// Nova Canvas and Titan Image Generator v2 share the Amazon image request
-// shape (taskType TEXT_IMAGE + textToImageParams + imageGenerationConfig).
-// Stability models (SD3.5, Core, Ultra) use prompt + aspect_ratio. Both
-// return { images: [base64] }.
-function buildRequestBody(
-  options: ImageOptions,
-  width: number,
-  height: number,
-  format: ImageModel["format"],
-): string {
-  if (format === "stability") {
-    return JSON.stringify({
-      prompt: options.prompt,
-      ...(options.negativePrompt && { negative_prompt: options.negativePrompt }),
-      aspect_ratio: toAspectRatio(width, height),
-      output_format: "png",
-      ...(options.seed !== undefined && { seed: options.seed }),
-    });
-  }
+// Every text-to-image model on Bedrock is Stability's now (Nova Canvas reached
+// end-of-life on 2026-09-30, Titan Image before it), and they share one request
+// shape: prompt + aspect_ratio in, { images: [base64] } out. An id outside the
+// registry gets the same shape.
+function buildRequestBody(options: ImageOptions, width: number, height: number): string {
   return JSON.stringify({
-    taskType: "TEXT_IMAGE",
-    textToImageParams: {
-      text: options.prompt,
-      ...(options.negativePrompt && { negativeText: options.negativePrompt }),
-    },
-    imageGenerationConfig: {
-      numberOfImages: 1,
-      width,
-      height,
-      cfgScale: 8.0,
-      ...(options.seed !== undefined && { seed: options.seed }),
-    },
+    prompt: options.prompt,
+    ...(options.negativePrompt && { negative_prompt: options.negativePrompt }),
+    aspect_ratio: toAspectRatio(width, height),
+    output_format: "png",
+    ...(options.seed !== undefined && { seed: options.seed }),
   });
 }
 
 export async function generateImage(options: ImageOptions): Promise<ImageResult> {
   const entry = getImageModel(options.model);
   const modelId = entry?.id ?? options.model;
-  const modelRegion = entry?.region;
   const width = options.width ?? 1024;
   const height = options.height ?? 1024;
 
-  const body = buildRequestBody(options, width, height, entry?.format);
   const start = Date.now();
-  const responseBody = await withBearerFallback(
-    async () => {
-      const command = new InvokeModelCommand({
-        modelId,
-        body: new TextEncoder().encode(body),
-        contentType: "application/json",
-        accept: "application/json",
-      });
-      const response = await getClient(modelRegion).send(command);
-      return new TextDecoder().decode(response.body);
-    },
-    async () => {
-      const json = await bedrockFetch(
-        `model/${encodeURIComponent(modelId)}/invoke`,
-        { method: "POST", body },
-        modelRegion,
-      );
-      return JSON.stringify(json);
-    },
-  );
-
+  const command = new InvokeModelCommand({
+    modelId,
+    body: new TextEncoder().encode(buildRequestBody(options, width, height)),
+    contentType: "application/json",
+    accept: "application/json",
+  });
+  const response = await getClient(entry?.region).send(command, { abortSignal: options.signal });
   const latencyMs = Date.now() - start;
 
-  const parsed = JSON.parse(responseBody) as {
+  const saved = await saveImage(firstImage(response.body), options.outputDir);
+  return { modelId, ...saved, latencyMs };
+}
+
+// The first image of a Stability response ({ images, finish_reasons }), shared
+// by text-to-image and the image-edit services, which answer the same way.
+export function firstImage(responseBody: Uint8Array): string {
+  const parsed = JSON.parse(new TextDecoder().decode(responseBody)) as {
     images?: string[];
     error?: string;
-    // Stability (SD3.5/Core/Ultra) reports content-filter and inference
-    // failures here; a null entry means success. There is no `error` field.
+    // Stability reports content-filter and inference failures here; a null
+    // entry means success. There is no `error` field.
     finish_reasons?: (string | null)[];
   };
   if (parsed.error) throw new Error(parsed.error);
@@ -189,14 +151,26 @@ export async function generateImage(options: ImageOptions): Promise<ImageResult>
   if (finishReason) throw new Error(`Image generation failed: ${finishReason}`);
   const base64 = parsed.images?.[0];
   if (!base64) throw new Error("Model returned no image data");
+  return base64;
+}
 
-  const outputDir = await resolveOutputDir(options.outputDir);
+// Saves a base64 image to the resolved output directory. The size is read back
+// for a PNG and left undefined for the other formats.
+export async function saveImage(
+  base64: string,
+  outputDirOption?: string,
+  format: "png" | "jpeg" | "webp" = "png",
+): Promise<{ filePath: string; width?: number; height?: number }> {
+  const outputDir = await resolveOutputDir(outputDirOption);
   await mkdir(outputDir, { recursive: true });
+  // The suffix keeps two images finished in the same millisecond from
+  // overwriting each other.
   const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
-  const filePath = join(outputDir, `${timestamp}.png`);
-  const png = Buffer.from(base64, "base64");
-  await writeFile(filePath, png);
+  const ext = format === "jpeg" ? "jpg" : format;
+  const filePath = join(outputDir, `${timestamp}-${randomUUID().slice(0, 8)}.${ext}`);
+  const bytes = Buffer.from(base64, "base64");
+  await writeFile(filePath, bytes);
 
-  const size = readPngSize(png);
-  return { modelId, filePath, width: size?.width, height: size?.height, latencyMs };
+  const size = format === "png" ? readPngSize(bytes) : undefined;
+  return { filePath, width: size?.width, height: size?.height };
 }

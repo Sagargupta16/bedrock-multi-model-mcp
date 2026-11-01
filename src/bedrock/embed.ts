@@ -1,68 +1,61 @@
 import { InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import { z } from "zod";
+import { indexByAlias, loadRegistry } from "../models.js";
 import { EmbeddingModelSchema, type EmbeddingModel } from "../types.js";
-import { bedrockFetch, getClient, withBearerFallback } from "./client.js";
+import { getClient } from "./client.js";
 
 // Embedding model catalog loaded and validated from src/data/embedding-models.json.
-const dataDir = join(dirname(fileURLToPath(import.meta.url)), "..", "data");
-const raw = readFileSync(join(dataDir, "embedding-models.json"), "utf-8");
-export const EMBEDDING_MODELS: EmbeddingModel[] = z
-  .array(EmbeddingModelSchema)
-  .parse(JSON.parse(raw));
+export const EMBEDDING_MODELS: EmbeddingModel[] = loadRegistry("embedding-models.json", EmbeddingModelSchema);
 
-const EMBEDDING_ALIASES: Record<string, EmbeddingModel> = Object.fromEntries(
-  EMBEDDING_MODELS.flatMap((m) => m.aliases.map((a) => [a.toLowerCase(), m])),
-);
+const EMBEDDING_ALIASES = indexByAlias(EMBEDDING_MODELS);
 
 export function getEmbeddingModel(alias: string): EmbeddingModel | undefined {
   return EMBEDDING_ALIASES[alias.toLowerCase()];
 }
 
-async function invoke(modelId: string, body: Record<string, unknown>): Promise<unknown> {
-  const json = JSON.stringify(body);
-  return withBearerFallback(
-    async () => {
-      const command = new InvokeModelCommand({
-        modelId,
-        body: new TextEncoder().encode(json),
-        contentType: "application/json",
-        accept: "application/json",
-      });
-      const response = await getClient().send(command);
-      return JSON.parse(new TextDecoder().decode(response.body)) as unknown;
-    },
-    () =>
-      bedrockFetch(`model/${encodeURIComponent(modelId)}/invoke`, {
-        method: "POST",
-        body: json,
-      }),
-  );
+// Titan takes one text per request; this many run at once, so a 50-text call
+// is 7 rounds of requests instead of 50 in a row.
+const TITAN_CONCURRENCY = 8;
+
+async function invoke(modelId: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
+  const command = new InvokeModelCommand({
+    modelId,
+    body: new TextEncoder().encode(JSON.stringify(body)),
+    contentType: "application/json",
+    accept: "application/json",
+  });
+  const response = await getClient().send(command, { abortSignal: signal });
+  return JSON.parse(new TextDecoder().decode(response.body)) as unknown;
 }
 
 // Amazon Titan embeds one text per call: { inputText } -> { embedding: number[] }.
-// Cohere embeds a batch: { texts, input_type } -> { embeddings: number[][] }.
-export async function embed(modelId: string, texts: string[]): Promise<number[][]> {
-  const isCohere = modelId.startsWith("cohere.");
+// Cohere embeds a batch: { texts, input_type }. Embed v3 answers with
+// { embeddings: number[][] }; Embed v4 keys them by type even when no type is
+// asked for, { embeddings: { float: number[][] } } (probed 2026-11-01).
+export async function embed(modelId: string, texts: string[], signal?: AbortSignal): Promise<number[][]> {
+  // Matches the base id and its inference profiles (us.cohere.embed-v4:0).
+  const isCohere = /(^|\.)cohere\./.test(modelId);
 
   if (isCohere) {
-    const res = (await invoke(modelId, {
-      texts,
-      input_type: "search_document",
-    })) as { embeddings?: number[][] };
-    if (!res.embeddings) throw new Error("Model returned no embeddings");
-    return res.embeddings;
+    const res = (await invoke(modelId, { texts, input_type: "search_document" }, signal)) as {
+      embeddings?: number[][] | { float?: number[][] };
+    };
+    const vectors = Array.isArray(res.embeddings) ? res.embeddings : res.embeddings?.float;
+    if (!vectors) throw new Error("Model returned no embeddings");
+    return vectors;
   }
 
-  // Titan: one request per input text.
+  // Titan: one request per text, TITAN_CONCURRENCY at a time, results kept in input order.
   const vectors: number[][] = [];
-  for (const text of texts) {
-    const res = (await invoke(modelId, { inputText: text })) as { embedding?: number[] };
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    const i = next++;
+    if (i >= texts.length) return;
+    const res = (await invoke(modelId, { inputText: texts[i] }, signal)) as { embedding?: number[] };
     if (!res.embedding) throw new Error("Model returned no embedding");
-    vectors.push(res.embedding);
-  }
+    vectors[i] = res.embedding;
+    return worker();
+  };
+  await Promise.all(Array.from({ length: Math.min(TITAN_CONCURRENCY, texts.length) }, worker));
   return vectors;
 }
 

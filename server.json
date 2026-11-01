@@ -2,17 +2,17 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Sagargupta16/bedrock-multi-model-mcp",
   "title": "Bedrock Multi-Model",
-  "description": "Ask, compare and judge 26 AWS Bedrock text models, plus image, video and embeddings.",
+  "description": "Ask, compare and judge 33 Bedrock text models, generate and edit images, plus video and embeddings.",
   "repository": {
     "url": "https://github.com/Sagargupta16/bedrock-multi-model-mcp",
     "source": "github"
   },
-  "version": "0.6.0",
+  "version": "0.7.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "bedrock-multi-model-mcp",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "transport": {
         "type": "stdio"
       },

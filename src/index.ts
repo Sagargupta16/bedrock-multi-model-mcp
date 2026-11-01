@@ -5,9 +5,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { converse, effortFor, type ConverseResult } from "./bedrock/converse.js";
-import { generateImage, IMAGE_MODELS, getImageModel } from "./bedrock/image.js";
-import { startVideoGeneration, getVideoStatus, VIDEO_MODELS } from "./bedrock/video.js";
-import { embed, cosineSimilarity, EMBEDDING_MODELS, getEmbeddingModel } from "./bedrock/embed.js";
+import { generateImage, getImageModel } from "./bedrock/image.js";
+import { editImage, EDIT_MODELS, STYLE_PRESETS, EDIT_ASPECT_RATIOS, OUTPUT_FORMATS } from "./bedrock/edit.js";
+import { startVideoGeneration, getVideoStatus } from "./bedrock/video.js";
+import { embed, cosineSimilarity, getEmbeddingModel } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
 import { runJudge, formatJudgeReport } from "./judge.js";
 import { EFFORT_LEVELS } from "./types.js";
@@ -25,21 +26,29 @@ const server = new McpServer({
 });
 
 const effortParam = z.enum(EFFORT_LEVELS).optional().describe(
-  "Thinking depth and token spend for models that take it (Claude except Haiku 4.5): low, medium, high, xhigh, max. " +
-  "Opus 5.5 and Haiku 5.5 default to medium, the others to high. bedrock_ask rejects it for other models; " +
-  "bedrock_compare and bedrock_judge apply it only to the models that take it."
+  "Thinking depth and token spend for models that take it (Claude except Haiku 4.5, GPT-6.1, Grok 4.7, " +
+  "Kimi K3, Gemma 4 up to xhigh): low, medium, high, xhigh, max. Claude Opus 5.5 and Haiku 5.5 default to " +
+  "medium. bedrock_ask rejects it for other models; bedrock_compare and bedrock_judge apply it only to the " +
+  "models that take it."
 );
 const schemaParam = z.record(z.string(), z.unknown()).optional().describe(
   "JSON schema the reply must match (structured output). Object schemas need additionalProperties: false. " +
-  "Supported by Claude, Mistral Large 3, Devstral 2, Qwen3, DeepSeek V3.2 and GPT-OSS; not by Nova, Llama, " +
-  "Mistral Small, Pixtral or DeepSeek R1."
+  "Supported by Claude, GPT-6.1, GPT-OSS, Grok 4.7, Kimi K3, Gemma 4, Mistral Large 3, Ministral 3, Qwen3, " +
+  "DeepSeek V3.2, MiniMax M2.5 and Nemotron 3 Super; not by Nova, Pixtral or Magistral Small."
 );
+const maxTokensParam = z.number().int().positive().optional();
 
 // A schema reply is shown as pretty JSON; when it did not parse, the raw text follows a note.
 function replyBody(result: ConverseResult, schemaSent: boolean): string {
   if (!schemaSent) return result.text;
   if (result.json === undefined) return `*Reply was not valid JSON (stop: ${result.stopReason}):*\n\n${result.text}`;
   return "```json\n" + JSON.stringify(result.json, null, 2) + "\n```";
+}
+
+// Every tool reports a thrown error the same way: its message, flagged isError.
+function errorResult(err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
 }
 
 // --- Tool: bedrock_ask ---
@@ -49,23 +58,23 @@ server.registerTool(
   {
     description:
       "Send a prompt to any AWS Bedrock model via the Converse API. " +
-      "Supports Claude, Llama, Mistral, Nova, Qwen, DeepSeek, GPT-OSS, and more. " +
-      "Use short aliases (e.g. 'llama4', 'nova-pro') or full model IDs. " +
-      "Pass schema to get JSON that matches it, and effort to set Claude's thinking depth.",
+      "Supports Claude, GPT, Grok, Kimi, Gemma, Mistral, Nova, Qwen, DeepSeek, and more. " +
+      "Use short aliases (e.g. 'claude-sonnet', 'nova-pro') or full model IDs. " +
+      "Pass schema to get JSON that matches it, and effort to set the thinking depth.",
     inputSchema: {
       model: z.string().describe(
-        "Model alias (e.g. 'claude-opus', 'llama4', 'mistral-large', 'nova-pro', 'deepseek') or full Bedrock model ID"
+        "Model alias (e.g. 'claude-opus', 'kimi', 'mistral-large', 'nova-pro', 'deepseek') or full Bedrock model ID"
       ),
       prompt: z.string().describe("The user prompt to send to the model"),
       system: z.string().optional().describe("Optional system prompt"),
       temperature: z.number().min(0).max(1).optional().describe("Sampling temperature (0-1, default 0.7). Ignored by models that don't support it."),
-      max_tokens: z.number().positive().optional().describe("Maximum tokens to generate"),
+      max_tokens: maxTokensParam.describe("Maximum tokens to generate"),
       effort: effortParam,
       schema: schemaParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ model, prompt, system, temperature, max_tokens, effort, schema }) => {
+  async ({ model, prompt, system, temperature, max_tokens, effort, schema }, { signal }) => {
     try {
       const result = await converse({
         modelId: model,
@@ -75,6 +84,7 @@ server.registerTool(
         maxTokens: max_tokens,
         effort,
         schema,
+        signal,
       });
 
       const info = getModelInfo(result.modelId);
@@ -87,8 +97,7 @@ server.registerTool(
 
       return { content: [{ type: "text" as const, text: header + replyBody(result, !!schema) }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+      return errorResult(err);
     }
   }
 );
@@ -103,18 +112,18 @@ server.registerTool(
       "Useful for evaluating model quality, speed, and style differences.",
     inputSchema: {
       models: z.array(z.string()).min(2).max(5).describe(
-        "List of 2-5 model aliases or IDs to compare (e.g. ['llama4', 'nova-pro', 'mistral-large'])"
+        "List of 2-5 model aliases or IDs to compare (e.g. ['kimi', 'nova-pro', 'mistral-large'])"
       ),
       prompt: z.string().describe("The prompt to send to all models"),
       system: z.string().optional().describe("Optional system prompt sent to all models"),
       temperature: z.number().min(0).max(1).optional().describe("Sampling temperature for all models"),
-      max_tokens: z.number().positive().optional().describe("Maximum tokens per model response"),
+      max_tokens: maxTokensParam.describe("Maximum tokens per model response"),
       effort: effortParam,
       schema: schemaParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ models, prompt, system, temperature, max_tokens, effort, schema }) => {
+  async ({ models, prompt, system, temperature, max_tokens, effort, schema }, { signal }) => {
     const results = await Promise.allSettled(
       models.map((m) =>
         converse({
@@ -125,6 +134,7 @@ server.registerTool(
           maxTokens: max_tokens,
           effort: effortFor(m, effort),
           schema,
+          signal,
         })
       )
     );
@@ -151,7 +161,9 @@ server.registerTool(
       }
     }
 
-    return { content: [{ type: "text" as const, text: sections.join("\n\n---\n\n") }] };
+    // Partial failures are part of a comparison; only an all-failed call is an error.
+    const allFailed = results.every((r) => r.status === "rejected");
+    return { content: [{ type: "text" as const, text: sections.join("\n\n---\n\n") }], isError: allFailed };
   }
 );
 
@@ -166,7 +178,7 @@ server.registerTool(
       "Set synthesize to also get one merged answer that keeps the best of each.",
     inputSchema: {
       models: z.array(z.string()).min(2).max(5).describe(
-        "List of 2-5 candidate model aliases or IDs (e.g. ['llama4', 'nova-pro', 'deepseek'])"
+        "List of 2-5 candidate model aliases or IDs (e.g. ['kimi', 'nova-pro', 'deepseek'])"
       ),
       prompt: z.string().describe("The prompt every candidate answers"),
       judge: z.string().optional().describe("Judge model alias or ID (default 'claude-opus')"),
@@ -176,12 +188,12 @@ server.registerTool(
       synthesize: z.boolean().optional().describe("Also return one merged final answer (default false)"),
       system: z.string().optional().describe("Optional system prompt sent to the candidates"),
       temperature: z.number().min(0).max(1).optional().describe("Sampling temperature for the candidates"),
-      max_tokens: z.number().positive().optional().describe("Maximum tokens per candidate response"),
+      max_tokens: maxTokensParam.describe("Maximum tokens per candidate response"),
       effort: effortParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ models, prompt, judge, criteria, synthesize, system, temperature, max_tokens, effort }) => {
+  async ({ models, prompt, judge, criteria, synthesize, system, temperature, max_tokens, effort }, { signal }) => {
     try {
       const report = await runJudge({
         models,
@@ -193,11 +205,11 @@ server.registerTool(
         temperature,
         maxTokens: max_tokens,
         effort,
+        signal,
       });
       return { content: [{ type: "text" as const, text: formatJudgeReport(report) }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+      return errorResult(err);
     }
   }
 );
@@ -212,7 +224,7 @@ server.registerTool(
       "Filter by provider name if needed.",
     inputSchema: {
       provider: z.string().optional().describe(
-        "Filter by provider (e.g. 'Anthropic', 'Meta', 'Mistral', 'Amazon', 'Qwen', 'DeepSeek', 'OpenAI')"
+        "Filter by provider (e.g. 'Anthropic', 'OpenAI', 'xAI', 'Mistral', 'Amazon', 'Qwen', 'DeepSeek')"
       ),
     },
     annotations: { readOnlyHint: true },
@@ -270,7 +282,7 @@ server.registerTool(
       height: z.number().positive().optional().describe(
         "Desired height (default 1024). See `width` - only the resulting aspect ratio is sent."
       ),
-      seed: z.number().optional().describe("Random seed for reproducible results"),
+      seed: z.number().int().nonnegative().optional().describe("Random seed for reproducible results"),
       output_dir: z.string().optional().describe(
         "Directory to save the image. Absolute or relative to cwd. " +
         "Auto-created if missing. Overrides BEDROCK_MCP_OUTPUT_DIR and default resolution."
@@ -278,7 +290,7 @@ server.registerTool(
     },
     annotations: { openWorldHint: true },
   },
-  async ({ model, prompt, negative_prompt, width, height, seed, output_dir }) => {
+  async ({ model, prompt, negative_prompt, width, height, seed, output_dir }, { signal }) => {
     try {
       const result = await generateImage({
         model: model ?? "stable-ultra",
@@ -288,6 +300,7 @@ server.registerTool(
         height,
         seed,
         outputDir: output_dir,
+        signal,
       });
 
       const entry = getImageModel(model ?? "stable-ultra");
@@ -301,8 +314,102 @@ server.registerTool(
 
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+      return errorResult(err);
+    }
+  }
+);
+
+// --- Tool: bedrock_edit_image ---
+// Edit or transform a local image with one of Stability AI's image services.
+const editOperations = EDIT_MODELS.map((m) => m.operation) as [string, ...string[]];
+const editOperationHelp = EDIT_MODELS.map((m) => {
+  const needs: string[] = m.requires.map((f) => (f === "style_image" ? "style_image_path" : f));
+  if (m.requiresOneOf) needs.push(`one of ${m.requiresOneOf.join("/")}`);
+  return `${m.operation}${needs.length ? ` (needs ${needs.join(", ")})` : ""}`;
+}).join("; ");
+
+server.registerTool(
+  "bedrock_edit_image",
+  {
+    description:
+      "Edit or transform a local image with Stability AI Image Services on AWS Bedrock: fill or erase a masked " +
+      "area, extend the canvas, swap or recolor an object found by a prompt, remove the background, upscale, " +
+      "draw from a sketch or structure, or apply a style. Saves the result as a PNG, like bedrock_generate_image.",
+    inputSchema: {
+      operation: z.enum(editOperations).describe(`What to do: ${editOperationHelp}`),
+      image_path: z.string().describe(
+        "Input image (PNG, JPEG or WebP), absolute or relative to cwd. For style-transfer, the image to restyle."
+      ),
+      prompt: z.string().optional().describe("What the output should show"),
+      negative_prompt: z.string().optional().describe("What to keep out of the output"),
+      mask_path: z.string().optional().describe(
+        "inpaint, erase: black-and-white mask image, white where the image should change. " +
+        "Without it, the input image's alpha channel is used as the mask."
+      ),
+      style_image_path: z.string().optional().describe("style-transfer: the image whose style is applied"),
+      search_prompt: z.string().optional().describe("search-replace: the object to find and replace"),
+      select_prompt: z.string().optional().describe("search-recolor: the object to find and recolor"),
+      left: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add on the left"),
+      right: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add on the right"),
+      up: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add on top"),
+      down: z.number().int().min(0).max(2000).optional().describe("outpaint: pixels to add at the bottom"),
+      creativity: z.number().min(0.1).max(1).optional().describe(
+        "upscale-conservative and upscale-creative (0.1-0.5), outpaint (0.1-1): how much new detail to invent"
+      ),
+      control_strength: z.number().min(0).max(1).optional().describe(
+        "control-sketch, control-structure: how closely the output follows the input (default 0.7)"
+      ),
+      grow_mask: z.number().int().min(0).max(20).optional().describe(
+        "inpaint, erase, search-replace, search-recolor: pixels to grow and soften the mask edge (default 5)"
+      ),
+      fidelity: z.number().min(0).max(1).optional().describe(
+        "style-guide: how closely the output follows the input image's style (default 0.5)"
+      ),
+      aspect_ratio: z.enum(EDIT_ASPECT_RATIOS).optional().describe("style-guide: output aspect ratio (default 1:1)"),
+      composition_fidelity: z.number().min(0).max(1).optional().describe(
+        "style-transfer: how closely the output keeps the input's composition (default 0.9)"
+      ),
+      style_strength: z.number().min(0).max(1).optional().describe(
+        "style-transfer: how strongly the style image applies (default 1)"
+      ),
+      change_strength: z.number().min(0.1).max(1).optional().describe(
+        "style-transfer: how much the input may change (default 0.9)"
+      ),
+      style_preset: z.enum(STYLE_PRESETS).optional().describe("Style preset, for the operations that take one"),
+      seed: z.number().int().min(0).max(4294967294).optional().describe("Random seed for reproducible results"),
+      output_format: z.enum(OUTPUT_FORMATS).optional().describe(
+        "Result file format (default png; webp for the three upscale operations, whose PNG is over " +
+        "Bedrock's 16 MB response limit)"
+      ),
+      output_dir: z.string().optional().describe(
+        "Directory to save the image, as in bedrock_generate_image (BEDROCK_MCP_OUTPUT_DIR, cwd or ~/bedrock-images)"
+      ),
+    },
+    annotations: { openWorldHint: true },
+  },
+  async (
+    { operation, image_path, mask_path, style_image_path, output_format, output_dir, ...fields },
+    { signal },
+  ) => {
+    try {
+      const result = await editImage({
+        operation,
+        imagePath: image_path,
+        maskPath: mask_path,
+        styleImagePath: style_image_path,
+        fields,
+        outputFormat: output_format,
+        outputDir: output_dir,
+        signal,
+      });
+      const size =
+        result.width && result.height ? `Size: ${result.width}x${result.height} | ` : "";
+      const text = `**${result.modelName}** - Image edited\n` +
+        `${size}Latency: ${(result.latencyMs / 1000).toFixed(1)}s\n\n` +
+        `Saved to: \`${result.filePath}\``;
+      return { content: [{ type: "text" as const, text }] };
+    } catch (err) {
+      return errorResult(err);
     }
   }
 );
@@ -348,8 +455,7 @@ server.registerTool(
 
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+      return errorResult(err);
     }
   }
 );
@@ -367,9 +473,9 @@ server.registerTool(
     },
     annotations: { readOnlyHint: true },
   },
-  async ({ invocation_arn }) => {
+  async ({ invocation_arn }, { signal }) => {
     try {
-      const result = await getVideoStatus(invocation_arn);
+      const result = await getVideoStatus(invocation_arn, undefined, signal);
 
       let text = `**Video Job Status: ${result.status}**\n`;
       if (result.submitTime) text += `Started: ${result.submitTime}\n`;
@@ -385,8 +491,7 @@ server.registerTool(
 
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+      return errorResult(err);
     }
   }
 );
@@ -405,18 +510,18 @@ server.registerTool(
         "List of 2-50 texts to embed and compare pairwise"
       ),
       model: z.string().optional().describe(
-        "Embedding model alias: 'titan-v2' (default), 'titan-v1', 'cohere-en', 'cohere-multi', or a full model ID"
+        "Embedding model alias: 'titan-v2' (default), 'titan-multimodal', 'cohere' (Embed v4), or a full model ID"
       ),
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ texts, model }) => {
+  async ({ texts, model }, { signal }) => {
     try {
       const entry = getEmbeddingModel(model ?? "titan-v2");
       const modelId = entry?.id ?? model ?? "amazon.titan-embed-text-v2:0";
       const label = entry ? `${entry.name} (${entry.provider})` : modelId;
 
-      const vectors = await embed(modelId, texts);
+      const vectors = await embed(modelId, texts, signal);
 
       // Build a markdown similarity matrix with short text labels.
       const labels = texts.map((t, i) => `${i + 1}. ${t.length > 24 ? t.slice(0, 21) + "..." : t}`);
@@ -436,16 +541,10 @@ server.registerTool(
 
       return { content: [{ type: "text" as const, text }] };
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+      return errorResult(err);
     }
   }
 );
-
-// Touch the catalogs so the imports are retained and they validate at startup.
-void IMAGE_MODELS;
-void VIDEO_MODELS;
-void EMBEDDING_MODELS;
 
 // Start the server
 async function main() {

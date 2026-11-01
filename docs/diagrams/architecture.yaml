@@ -3,7 +3,7 @@
 #   orrery render docs/diagrams/architecture.yaml -o docs/diagrams/architecture -f svg --theme both
 # Reviewed at README width: orrery review docs/diagrams/architecture.yaml --width 880
 title: How a tool call reaches Bedrock
-subtitle: One stdio MCP server, one cached SDK client per region, and a bearer-token HTTPS retry only on auth errors
+subtitle: One stdio MCP server, one cached SDK client per region, and a cancelled tool call aborts its Bedrock request
 direction: down
 layout: { spacing: compact }
 legend:
@@ -14,7 +14,7 @@ groups:
     type: box
     label: bedrock-multi-model-mcp
     icon: logos:nodejs-icon
-    evidence: src/index.ts:22#McpServer
+    evidence: src/index.ts:23#McpServer
   cloud:
     type: aws:cloud
     label: AWS Cloud
@@ -36,82 +36,87 @@ nodes:
     icon: logos:claude-icon
     label: MCP client
     note: Claude Code, Claude Desktop, any client
-    evidence: src/index.ts:452#StdioServerTransport
+    evidence: src/index.ts:542#StdioServerTransport
   tools:
     icon: logos:model-context-protocol-icon
-    label: 8 MCP tools
+    label: 9 MCP tools
     note: index.ts, Zod input schemas
     in: server
-    evidence: src/index.ts:47#registerTool
+    evidence: src/index.ts:55#registerTool
   registry:
     icon: tabler:json
     label: Model registries
     note: src/data/*.json, Zod-checked at load
     in: server
     evidence:
-      - src/models.ts:16#TEXT_MODELS
-      - src/bedrock/image.ts:14#IMAGE_MODELS
-      - src/bedrock/video.ts:18#VIDEO_MODELS
-      - src/bedrock/embed.ts:12#EMBEDDING_MODELS
+      - src/models.ts:26#TEXT_MODELS
+      - src/bedrock/image.ts:11#IMAGE_MODELS
+      - src/bedrock/edit.ts:12#EDIT_MODELS
+      - src/bedrock/video.ts:13#VIDEO_MODELS
+      - src/bedrock/embed.ts:7#EMBEDDING_MODELS
   wrappers:
     icon: github:code
     label: API wrappers
-    note: converse, image, video, embed
+    note: converse, mantle, image, edit, video, embed
     in: server
     evidence:
-      - src/bedrock/converse.ts:129#converse
-      - src/bedrock/image.ts:148#generateImage
-      - src/bedrock/video.ts:71#startVideoGeneration
-      - src/bedrock/embed.ts:47#embed
+      - src/bedrock/converse.ts:128#converse
+      - src/bedrock/mantle.ts:16#mantleChat
+      - src/bedrock/image.ts:119#generateImage
+      - src/bedrock/edit.ts:100#editImage
+      - src/bedrock/video.ts:65#startVideoGeneration
+      - src/bedrock/embed.ts:34#embed
   sdk:
     icon: tabler:key
     label: Bedrock client
-    note: per region, bearer retry on auth errors
+    note: per region, bearer token or IAM
     in: server
     evidence:
-      - src/bedrock/client.ts:15#getClient
-      - src/bedrock/client.ts:49#withBearerFallback
-      - src/bedrock/client.ts:72#bedrockFetch
+      - src/bedrock/client.ts:23#getClient
+      - src/bedrock/client.ts:17#AWS_BEARER_TOKEN_BEDROCK
   bedrock-east:
     icon: aws:bedrock
     label: Amazon Bedrock
-    note: Converse, embeddings; AWS_REGION
+    note: Converse, mantle, embeddings; AWS_REGION
     in: east
     evidence:
-      - src/bedrock/converse.ts:139#getClient
-      - src/bedrock/embed.ts:34#getClient
+      - src/bedrock/converse.ts:151#getClient
+      - src/bedrock/mantle.ts:49#bedrock-mantle
+      - src/bedrock/embed.ts:26#getClient
   bedrock-west:
     icon: aws:bedrock
     label: Amazon Bedrock
-    note: Stability images, Luma Ray 2
+    note: Stability images and edits, Luma Ray 2
     in: west
     evidence:
-      - src/bedrock/image.ts:165#getClient
-      - src/bedrock/video.ts:93#getClient
+      - src/bedrock/image.ts:132#getClient
+      - src/bedrock/edit.ts:120#getClient
+      - src/bedrock/video.ts:83#getClient
   bucket:
     icon: aws:simple-storage-service-bucket
     label: Video output bucket
     note: the s3_uri argument
     in: west
     evidence:
-      - src/bedrock/video.ts:90#s3OutputDataConfig
-      - src/index.ts:319#us-west-2
+      - src/bedrock/video.ts:80#s3OutputDataConfig
+      - src/index.ts:417#us-west-2
     align: bedrock-west
   disk:
     icon: ph:file-image
     label: Local PNG files
     note: output_dir, env var or cwd
     evidence:
-      - src/bedrock/image.ts:198#writeFile
-      - src/bedrock/image.ts:75#BEDROCK_MCP_OUTPUT_DIR
+      - src/bedrock/image.ts:169#writeFile
+      - src/bedrock/image.ts:67#BEDROCK_MCP_OUTPUT_DIR
 
 edges:
-  - client -> tools: { label: JSON-RPC over stdio, evidence: "src/index.ts:453#connect" }
-  - tools -> registry: { label: list models, evidence: "src/index.ts:221#TEXT_MODELS" }
+  - client -> tools: { label: JSON-RPC over stdio, evidence: "src/index.ts:543#connect" }
+  - tools -> registry: { label: list models, evidence: "src/index.ts:232#TEXT_MODELS" }
   - tools -> wrappers
-  - wrappers -> registry: { label: "alias, region, request shape", evidence: "src/bedrock/image.ts:149#getImageModel" }
+  - wrappers -> registry: { label: "alias, region, request shape", evidence: "src/bedrock/image.ts:120#getImageModel" }
   - wrappers -> sdk
-  - sdk -> bedrock-east: { label: "Converse, InvokeModel", evidence: "src/bedrock/converse.ts:139#ConverseCommand" }
-  - sdk -> bedrock-west: { label: "InvokeModel, StartAsyncInvoke", evidence: "src/bedrock/video.ts:86#StartAsyncInvokeCommand" }
-  - bedrock-west --> bucket: { label: writes MP4, evidence: "src/index.ts:379#output.mp4" }
-  - wrappers -> disk: { label: decoded PNG, evidence: "src/bedrock/image.ts:198#writeFile" }
+  - sdk -> bedrock-east: { label: "Converse, InvokeModel", evidence: "src/bedrock/converse.ts:151#ConverseCommand" }
+  - wrappers -> bedrock-east: { label: "Gemma 4 over bedrock-mantle", evidence: "src/bedrock/mantle.ts:49#fetch" }
+  - sdk -> bedrock-west: { label: "InvokeModel, StartAsyncInvoke", evidence: "src/bedrock/video.ts:76#StartAsyncInvokeCommand" }
+  - bedrock-west --> bucket: { label: writes MP4, evidence: "src/index.ts:476#output.mp4" }
+  - wrappers -> disk: { label: decoded PNG, evidence: "src/bedrock/image.ts:169#writeFile" }

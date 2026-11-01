@@ -8,14 +8,6 @@
     "modality": "text"
   },
   {
-    "id": "amazon.titan-embed-text-v1",
-    "name": "Titan Text Embeddings V1",
-    "provider": "Amazon",
-    "aliases": ["titan-v1", "titan-embed-v1"],
-    "dimensions": 1536,
-    "modality": "text"
-  },
-  {
     "id": "amazon.titan-embed-image-v1",
     "name": "Titan Multimodal Embeddings",
     "provider": "Amazon",
@@ -24,19 +16,11 @@
     "modality": "multimodal"
   },
   {
-    "id": "cohere.embed-english-v3",
-    "name": "Cohere Embed English v3",
+    "id": "cohere.embed-v4:0",
+    "name": "Cohere Embed v4",
     "provider": "Cohere",
-    "aliases": ["cohere-en", "cohere-english"],
-    "dimensions": 1024,
-    "modality": "text"
-  },
-  {
-    "id": "cohere.embed-multilingual-v3",
-    "name": "Cohere Embed Multilingual v3",
-    "provider": "Cohere",
-    "aliases": ["cohere-multi", "cohere-multilingual"],
-    "dimensions": 1024,
-    "modality": "text"
+    "aliases": ["cohere", "cohere-v4", "cohere-en", "cohere-english", "cohere-multi", "cohere-multilingual"],
+    "dimensions": 1536,
+    "modality": "multimodal"
   }
 ]
