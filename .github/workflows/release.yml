@@ -64,6 +64,23 @@ jobs:
             npm publish --access public
           fi
 
+      # The registry checks that npm serves this version, and a fresh publish
+      # takes a few minutes to appear: v0.7.1's registry step ran 2 s after npm
+      # publish and got "version not found". Read-only wait, up to 10 minutes.
+      - name: Wait for npm to serve the version
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          for check in $(seq 1 40); do
+            if [ "$(npm view "${name}@${version}" version --prefer-online 2>/dev/null)" = "${version}" ]; then
+              echo "npm serves ${name}@${version} (check ${check})"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::npm did not serve ${name}@${version} within 10 minutes"
+          exit 1
+
       - name: Install mcp-publisher
         env:
           MCP_PUBLISHER_VERSION: v1.8.1
