@@ -84,7 +84,7 @@ npm run lint     # tsc --noEmit
 
 ## Usage                (CLI / tool)
 
-- `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for thinking depth (Claude, GPT-6.1, Grok 4.7, Kimi K3, Gemma 4).
+- `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for thinking depth (Claude, GPT-6 and 6.1, Grok 4.7, Kimi K3, Gemma 4).
 - `bedrock_compare` -- same prompt to 2-5 models side by side; takes `schema` and `effort`.
 - `bedrock_judge` -- 2-5 models answer, a judge model (default claude-opus, Opus 5.5) scores them blind and picks a winner; the verdict uses structured output when the judge supports it.
 - `bedrock_generate_image` / `bedrock_generate_video` + `bedrock_video_status` -- media generation.

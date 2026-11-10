@@ -78,6 +78,15 @@ test("aliases of the models added on 2026-11-01 resolve to the probed ids", () =
   }
 });
 
+test("aliases of the models added on 2026-11-10 resolve to the probed ids", () => {
+  // Each id answered a live Converse call on 2026-11-10 before it was added.
+  // Bare `fable` moved to 5.2; `fable-5.1` keeps the previous one reachable.
+  assert.equal(resolveModelId("fable"), "us.anthropic.claude-fable-5-2");
+  assert.equal(resolveModelId("fable-5.1"), "us.anthropic.claude-fable-5-1");
+  assert.equal(resolveModelId("gpt-astra"), "us.openai.gpt-6-astra");
+  assert.equal(resolveModelId("gpt-luna"), "us.openai.gpt-6-luna");
+});
+
 test("only the Gemma 4 entries are served through bedrock-mantle", () => {
   // AWS model cards (read 2026-11-01): Gemma 4 is on bedrock-mantle only, with no
   // Converse support; every other registry model answers through Converse.
@@ -87,11 +96,10 @@ test("only the Gemma 4 entries are served through bedrock-mantle", () => {
 });
 
 test("version-pinned aliases keep the previous generation reachable", () => {
-  // Anthropic's models overview (fetched 2026-09-06) lists Fable 5 and
-  // Sonnet 4.6 under "Legacy models (still available)", so the bare tier
-  // aliases move on and these pinned ones must not.
+  // The bare tier aliases move on with each release and these pinned ones must
+  // not. Fable 5 left the registry in 0.8.0, two versions behind Fable 5.2.
   assert.equal(resolveModelId("claude-sonnet-4.6"), "us.anthropic.claude-sonnet-4-6");
-  assert.equal(resolveModelId("fable-5"), "us.anthropic.claude-fable-5");
+  assert.equal(resolveModelId("claude-fable-5.1"), "us.anthropic.claude-fable-5-1");
   assert.equal(resolveModelId("claude-sonnet-5"), "us.anthropic.claude-sonnet-5");
   assert.equal(resolveModelId("claude-haiku-4.5"), "us.anthropic.claude-haiku-4-5-20251001-v1:0");
 });
@@ -101,8 +109,11 @@ test("effort is flagged exactly on the models that accepted it live", () => {
   // Haiku 4.5 answered on 2026-10-21, and GPT-6.1 Sol and Terra, Grok 4.7 and
   // Kimi K3 answered on 2026-11-01. Haiku 4.5 and every other Converse model
   // returned "This model doesn't support the effort field". The Gemma 4 models
-  // (bedrock-mantle reasoning_effort) took low to xhigh on 2026-11-01.
+  // (bedrock-mantle reasoning_effort) took low to xhigh on 2026-11-01. Fable 5.2,
+  // GPT-6 Astra and GPT-6 Luna answered at low and at max on 2026-11-10.
   const accepted = new Set([
+    "us.openai.gpt-6-astra",
+    "us.openai.gpt-6-luna",
     "us.openai.gpt-6.1-sol",
     "us.openai.gpt-6.1-terra",
     "us.xai.grok-4.7",
@@ -155,14 +166,17 @@ test("noTemperature is set exactly on the entries that rejected temperature live
   // On 2026-11-01 GPT-6.1 Sol and Terra, Grok 4.7 and Kimi K3 returned "This
   // model doesn't support the temperature field", while MiniMax M2.5, Nemotron 3
   // Super, Ministral 3, Magistral Small and Qwen3 Next answered with it set.
+  // On 2026-11-10 Fable 5.2, GPT-6 Astra and GPT-6 Luna rejected it the same way.
   for (const id of [
     "us.anthropic.claude-opus-5-5",
     "us.anthropic.claude-sonnet-5-5",
     "us.anthropic.claude-haiku-5-5",
+    "us.anthropic.claude-fable-5-2",
     "us.anthropic.claude-fable-5-1",
-    "us.anthropic.claude-fable-5",
     "us.anthropic.claude-opus-5",
     "us.anthropic.claude-sonnet-5",
+    "us.openai.gpt-6-astra",
+    "us.openai.gpt-6-luna",
     "us.openai.gpt-6.1-sol",
     "us.openai.gpt-6.1-terra",
     "us.xai.grok-4.7",
@@ -269,7 +283,7 @@ test("video registry loads and aliases resolve", () => {
 });
 
 test("fable alias resolves to the us inference profile", () => {
-  assert.equal(resolveModelId("fable"), "us.anthropic.claude-fable-5-1");
+  assert.equal(resolveModelId("fable"), "us.anthropic.claude-fable-5-2");
 });
 
 test("embedding registry loads and aliases resolve", () => {

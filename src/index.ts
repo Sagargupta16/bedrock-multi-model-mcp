@@ -26,14 +26,14 @@ const server = new McpServer({
 });
 
 const effortParam = z.enum(EFFORT_LEVELS).optional().describe(
-  "Thinking depth and token spend for models that take it (Claude except Haiku 4.5, GPT-6.1, Grok 4.7, " +
+  "Thinking depth and token spend for models that take it (Claude except Haiku 4.5, GPT-6 and 6.1, Grok 4.7, " +
   "Kimi K3, Gemma 4 up to xhigh): low, medium, high, xhigh, max. Claude Opus 5.5 and Haiku 5.5 default to " +
   "medium. bedrock_ask rejects it for other models; bedrock_compare and bedrock_judge apply it only to the " +
   "models that take it."
 );
 const schemaParam = z.record(z.string(), z.unknown()).optional().describe(
   "JSON schema the reply must match (structured output). Object schemas need additionalProperties: false. " +
-  "Supported by Claude, GPT-6.1, GPT-OSS, Grok 4.7, Kimi K3, Gemma 4, Mistral Large 3, Ministral 3, Qwen3, " +
+  "Supported by Claude, GPT-6 and 6.1, GPT-OSS, Grok 4.7, Kimi K3, Gemma 4, Mistral Large 3, Ministral 3, Qwen3, " +
   "DeepSeek V3.2, MiniMax M2.5 and Nemotron 3 Super; not by Nova, Pixtral or Magistral Small."
 );
 const maxTokensParam = z.number().int().positive().optional();

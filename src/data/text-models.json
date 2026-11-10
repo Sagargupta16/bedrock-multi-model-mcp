@@ -1,14 +1,14 @@
 [
   {
-    "id": "us.anthropic.claude-fable-5-1",
-    "name": "Claude Fable 5.1",
+    "id": "us.anthropic.claude-fable-5-2",
+    "name": "Claude Fable 5.2",
     "provider": "Anthropic",
     "useCase": "Most capable model, for demanding reasoning and long-horizon agentic work",
     "aliases": [
       "fable",
       "claude-fable",
-      "fable-5.1",
-      "claude-fable-5.1"
+      "fable-5.2",
+      "claude-fable-5.2"
     ],
     "capabilities": [
       "text",
@@ -23,12 +23,13 @@
     "effort": true
   },
   {
-    "id": "us.anthropic.claude-fable-5",
-    "name": "Claude Fable 5",
+    "id": "us.anthropic.claude-fable-5-1",
+    "name": "Claude Fable 5.1",
     "provider": "Anthropic",
     "useCase": "Previous-gen Fable reasoning, 1M context",
     "aliases": [
-      "fable-5"
+      "fable-5.1",
+      "claude-fable-5.1"
     ],
     "capabilities": [
       "text",
@@ -533,6 +534,26 @@
     "maxTokens": 5120
   },
   {
+    "id": "us.openai.gpt-6-astra",
+    "name": "GPT-6 Astra",
+    "provider": "OpenAI",
+    "useCase": "OpenAI's most capable model, for the hardest end-to-end work, 1M context",
+    "aliases": [
+      "gpt-astra",
+      "gpt-6-astra"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 16384,
+    "noTemperature": true,
+    "effort": true
+  },
+  {
     "id": "us.openai.gpt-6.1-sol",
     "name": "GPT-6.1 Sol",
     "provider": "OpenAI",
@@ -560,6 +581,26 @@
     "aliases": [
       "gpt-terra",
       "gpt-6.1-terra"
+    ],
+    "capabilities": [
+      "text",
+      "vision",
+      "streaming",
+      "reasoning",
+      "structured_output"
+    ],
+    "maxTokens": 16384,
+    "noTemperature": true,
+    "effort": true
+  },
+  {
+    "id": "us.openai.gpt-6-luna",
+    "name": "GPT-6 Luna",
+    "provider": "OpenAI",
+    "useCase": "Fast and cheap, for repeatable work at scale, 1M context",
+    "aliases": [
+      "gpt-luna",
+      "gpt-6-luna"
     ],
     "capabilities": [
       "text",
