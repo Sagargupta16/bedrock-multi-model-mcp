@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2026-11-10
+
+### Added
+
+- Claude Fable 5.2 (`us.anthropic.claude-fable-5-2`, on Bedrock since 2026-11-09), GPT-6 Astra (`gpt-astra`, the model AWS's card calls OpenAI's most capable) and GPT-6 Luna (`gpt-luna`, OpenAI's fast tier). Each was live-probed on 2026-11-10: all three take `schema` and `effort` from `low` to `max`, and reject `temperature`, so they are flagged `noTemperature`.
+
+### Changed
+
+- **Breaking:** bare `fable` and `claude-fable` now resolve to Fable 5.2. Fable 5.1 stays reachable as `fable-5.1` and `claude-fable-5.1`.
+- `@aws-sdk/client-bedrock-runtime` floor raised to ^3.1165.0.
+
+### Removed
+
+- **Breaking:** Claude Fable 5 (`fable-5`), now two versions behind Fable 5.2.
+
+### Not added
+
+- Kimi K3.1 Pro - Highspeed (`us.moonshotai.kimi-k3.1`, on Bedrock since 2026-11-04): every probe call on 2026-11-10 was throttled ("Too many tokens"), on the US and the global profile, so it stays out until a call answers. `kimi` still resolves to Kimi K3.
+
 ## [0.7.1] - 2026-11-01
 
 ### Changed
