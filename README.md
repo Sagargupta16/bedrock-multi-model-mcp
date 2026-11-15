@@ -299,7 +299,7 @@ cwd" behavior cannot apply and generated images fall back to `~/bedrock-images/`
 |----------|---------|-------------|
 | `AWS_REGION` | `us-east-1` | AWS region for Bedrock API calls |
 | `AWS_DEFAULT_REGION` | - | Fallback region, used only when `AWS_REGION` is unset |
-| `AWS_BEARER_TOKEN_BEDROCK` | - | Bedrock API Key bearer token (recommended) |
+| `AWS_BEARER_TOKEN_BEDROCK` | - | Bedrock API Key bearer token (recommended). On Windows, when the MCP client passes it empty or not at all (the Claude desktop app does not pass the user's key on), the server reads it from the user environment (`HKCU\Environment`) |
 | `AWS_ACCESS_KEY_ID` | - | AWS access key (if not using bearer token/SSO) |
 | `AWS_SECRET_ACCESS_KEY` | - | AWS secret key (if not using bearer token/SSO) |
 | `AWS_PROFILE` | - | Named AWS profile from `~/.aws/credentials` |
