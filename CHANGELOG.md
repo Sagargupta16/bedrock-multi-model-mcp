@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1] - 2026-11-15
+
+### Fixed
+
+- On Windows the server now reads `AWS_BEARER_TOKEN_BEDROCK` from the user environment (`HKCU\Environment`) when the MCP client passes it empty or not at all. The Claude desktop app does not pass the user's key on to the servers it starts, so a config with `"${AWS_BEARER_TOKEN_BEDROCK}"` arrived empty and every call failed with "Could not load credentials from any providers". Probed live on 2026-11-15: started with the key empty, the server found it and made a Stable Image Ultra image in 22 s. The value is never logged; other platforms are unchanged.
+
 ## [0.8.0] - 2026-11-10
 
 ### Added
