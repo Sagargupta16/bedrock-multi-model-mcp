@@ -23,5 +23,8 @@ coverage/
 yarn.lock
 pnpm-lock.yaml
 
+# MCP Bundle built by scripts/pack-mcpb.mjs
+*.mcpb
+
 # Added for consistency
 .next/

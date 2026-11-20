@@ -90,3 +90,38 @@ jobs:
       - run: ./mcp-publisher validate server.json
       - run: ./mcp-publisher login github-oidc
       - run: ./mcp-publisher publish
+
+  # Builds the one-click MCP Bundle (.mcpb) and attaches it to the GitHub release. A separate job
+  # so the publish job keeps read-only contents and the OIDC grant; this one can write releases
+  # and nothing else. Runs after publish, so a failed publish ships no bundle.
+  bundle:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create or update the GitHub release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The build below runs dev dependencies; they must not find a write
+          # token in .git/config. Only the attach step gets GH_TOKEN.
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: node scripts/pack-mcpb.mjs
+
+      - name: Attach the bundle to the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          file="bedrock-multi-model-mcp-${TAG#v}.mcpb"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$file" --clobber
+          else
+            gh release create "$TAG" "$file" --title "$TAG" --generate-notes
+          fi

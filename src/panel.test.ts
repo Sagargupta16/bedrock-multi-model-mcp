@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ConverseOptions, ConverseResult } from "./bedrock/converse.js";
+import { estimateCost, formatCost } from "./cost.js";
 import { getModelInfo, resolveModelId } from "./models.js";
 import {
   LEVELS,
@@ -9,8 +10,11 @@ import {
   buildPrompt,
   buildSummarySystem,
   buildSystem,
+  costTotal,
   formatPanelReport,
   levelHelp,
+  pickModel,
+  pickModels,
   resolveRole,
   resolveSeats,
   runPanel,
@@ -217,7 +221,59 @@ test("a model that fails loses its turn and the panel carries on", async () => {
 
   const text = formatPanelReport(report);
   assert.match(text, /### Nova Pro \(Amazon\)\n\n\*\*Error:\*\* ValidationException/);
-  assert.match(text, /\*Totals: 2\/3 turns answered \| 20 in \/ 40 out tokens \| 3\.0s model time\*/);
+  // The cost covers the two answered turns at their registry prices.
+  const cost = formatCost(
+    (estimateCost(resolveModelId("kimi"), 10, 20) ?? 0) + (estimateCost(resolveModelId("deepseek"), 10, 20) ?? 0),
+  );
+  assert.ok(
+    text.includes(`*Totals: 2/3 turns answered | 20 in / 40 out tokens | 3.0s model time | Est. cost: ${cost}*`),
+    text,
+  );
+});
+
+test("the panel cost covers the summary, and an unpriced model is counted out", async () => {
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> => fakeResult(o.modelId, "x");
+  const priced = formatPanelReport(
+    await runPanel({ prompt: "q", models: ["kimi", "nova-pro"], summarize: "nova-micro" }, ask),
+  );
+  const ids = ["kimi", "nova-pro", "nova-micro"].map(resolveModelId);
+  const all = formatCost(ids.reduce((n, id) => n + (estimateCost(id, 10, 20) ?? 0), 0));
+  assert.ok(priced.includes(`30 in / 60 out tokens | 4.5s model time | Est. cost: ${all}*`), priced);
+
+  // A model id outside the registry has no price: the total says how many were priced.
+  const partial = formatPanelReport(await runPanel({ prompt: "q", models: ["kimi", "custom.model-v1"] }, ask));
+  assert.match(partial, /\| Est\. cost: ~\$[0-9.]+ \(1 of 2 calls priced\)\*$/);
+
+  // Nothing priced: no cost at all.
+  const none = formatPanelReport(await runPanel({ prompt: "q", models: ["custom.a", "custom.b"] }, ask));
+  assert.match(none, /3\.0s model time\*$/);
+  assert.doesNotMatch(none, /Est\. cost/);
+});
+
+test("pickModels lets models win over level and checks the count, like the panel", () => {
+  assert.deepEqual(pickModels("bedrock_compare", ["kimi", "nova-pro"], "intense"), ["kimi", "nova-pro"]);
+  assert.deepEqual(pickModels("bedrock_judge", undefined, "cheap"), LEVELS.cheap);
+  assert.throws(() => pickModels("bedrock_compare"), /bedrock_compare needs models, or a level/);
+  assert.throws(() => pickModels("bedrock_judge", ["kimi"]), /bedrock_judge needs 2 to 5 models, got 1/);
+});
+
+test("pickModel takes model or the first model of a level, never both", () => {
+  assert.equal(pickModel("kimi"), "kimi");
+  assert.equal(pickModel(undefined, "medium"), LEVELS.medium[0]);
+  assert.equal(pickModel(undefined, "intense"), "fable");
+  assert.throws(() => pickModel("kimi", "cheap"), /bedrock_ask takes model or level, not both/);
+  assert.throws(() => pickModel(), /bedrock_ask needs model, or a level/);
+});
+
+test("costTotal prices registry models and leaves unknown ids out", () => {
+  const known = fakeResult(resolveModelId("nova-pro"), "x");
+  assert.equal(costTotal([known]), formatCost(estimateCost(known.modelId, 10, 20)));
+  assert.equal(
+    costTotal([known, fakeResult("custom.model", "x")]),
+    `${formatCost(estimateCost(known.modelId, 10, 20))} (1 of 2 calls priced)`,
+  );
+  assert.equal(costTotal([fakeResult("custom.model", "x")]), "");
+  assert.equal(costTotal([]), "");
 });
 
 test("the summary comes after the last round, and a failed summary does not lose the panel", async () => {

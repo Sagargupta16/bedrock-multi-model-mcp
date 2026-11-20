@@ -10,7 +10,7 @@ MCP server for AWS Bedrock - text, image, video and embeddings from any model. U
 
 **Why:** Bedrock already gives one AWS account access to models from eleven text providers,
 but each one is a different model ID, inference profile, region and request shape. This
-server puts them behind nine MCP tools and one set of AWS credentials, so an agent can
+server puts them behind eleven MCP tools and one set of AWS credentials, so an agent can
 ask a second model for a review, run the same prompt across five models side by side, have
 a judge model score those answers blind, or generate and edit an image, without leaving
 the chat or writing SDK code.
@@ -41,16 +41,23 @@ registry, so swap `llama4` for another model to rerun it.
 
 | Tool | Description |
 |------|-------------|
-| `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. `schema` returns JSON that matches a JSON schema; `effort` sets the thinking depth. |
-| `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. Takes `schema` and `effort` too. |
-| `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. The verdict comes back as schema-checked JSON when the judge supports it. |
-| `bedrock_panel` | A short discussion between 2-5 models: they answer in turn, each seeing what the earlier ones said, with optional roles (critic, builder, fact-checker and more), 1-3 rounds and a closing summary from a moderator model. Returns the transcript. |
-| `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
+| `bedrock_ask` | Send a prompt to any text model. Returns response with token counts, an estimated cost and latency. `schema` returns JSON that matches a JSON schema; `effort` sets the thinking depth; `files` adds local text files to the prompt; `level` picks a model instead of `model`; `conversation_id` keeps a follow-up conversation. |
+| `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. Takes `schema`, `effort`, `files` and `level` too. |
+| `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. The verdict comes back as schema-checked JSON when the judge supports it. Takes `files` and `level`. |
+| `bedrock_panel` | A short discussion between 2-5 models: they answer in turn, each seeing what the earlier ones said, with optional roles (critic, builder, fact-checker and more), 1-3 rounds and a closing summary from a moderator model. Returns the transcript. Takes `files` and `level`. |
+| `bedrock_list_models` | List available text models with aliases, use cases, capabilities and the estimated price per 1M tokens. |
+| `bedrock_doctor` | Check which text models work on your AWS account right now: one small billed call per model, one status each (`ok`, `throttled`, `denied`, `invalid` or `error`). |
 | `bedrock_generate_image` | Generate images from text (Stable Image Ultra, SD3.5 Large, Stable Image Core). Saves PNG locally. |
 | `bedrock_edit_image` | Edit or transform a local image with the 13 Stability AI Image Services: inpaint, outpaint, erase, remove the background, find and replace or recolor an object, three upscalers, sketch and structure control, style guide and style transfer. Saves PNG locally. |
-| `bedrock_generate_video` | Start async video generation (Luma Ray 2). Output to S3. |
+| `bedrock_generate_video` | Start async video generation (Luma Ray 2). Output to S3. `start_image_path` and `end_image_path` use local images as the first and last frame. |
 | `bedrock_video_status` | Check video generation job progress. |
-| `bedrock_embed_similarity` | Embed 2+ texts (Titan, Cohere) and return a cosine-similarity matrix. |
+| `bedrock_embed_similarity` | Embed 2+ texts (Titan, Cohere) and return a cosine-similarity matrix. `images` adds local images for the multimodal models. |
+
+The server also offers three MCP prompts, ready-made instructions that call the tools above: `second-opinion` (ask another model, default `gpt-astra`, and report where it agrees and disagrees), `compare-models` (run `bedrock_compare` and summarize the differences in a table) and `panel-discussion` (run `bedrock_panel` at a `level`, default `medium`, and report agreement, disagreement and a recommendation).
+
+### Estimated cost
+
+`bedrock_ask`, `bedrock_compare`, `bedrock_judge` and `bedrock_panel` end their output with an estimated cost (`Est. cost`), and `bedrock_list_models` shows the price per 1M input and output tokens. The prices are in the `price` field of [`src/data/text-models.json`](src/data/text-models.json), taken from the AWS Price List bulk files for us-east-1 (the `AmazonBedrockFoundationModels` and `AmazonBedrock` offers), read 2026-11-20: on-demand, standard tier, USD. For ids with the `us.` profile prefix the non-global price is used (AWS lists a global price about 10 percent lower). The estimate leaves out cache, batch and long-context pricing and uses the token counts Bedrock reports, so treat it as an estimate and check [AWS Bedrock pricing](https://aws.amazon.com/bedrock/pricing/) for the bill.
 
 ## Supported Models
 
@@ -186,13 +193,18 @@ cost several times more than the other services
 |-------|-------|----------|------------|--------|
 | Luma Ray 2 | `luma-ray`, `ray2` | 5s or 9s | 720p | us-west-2 |
 
-The output S3 bucket must be in us-west-2 (same region as the model).
+The output S3 bucket must be in us-west-2 (same region as the model). `start_image_path`
+and `end_image_path` make the video start or end on a local JPEG or PNG (512x512 to
+4096x4096 pixels); the images are checked before the job is started.
 
 Amazon Nova Canvas/Reel and Titan Image were removed when AWS marked them
 end-of-life (Nova Canvas and Nova Reel EOL 2026-09-30). The registry only ships ACTIVE
 models: AWS blocks new customers from Legacy ones. `npm run lifecycle` checks every
 registry id against AWS's public lifecycle page (no credentials needed), and CI runs it
-weekly and on every registry change.
+weekly and on every registry change. `npm run new-models` does the opposite check: it
+lists the Bedrock model cards that the catalog neither has nor has skipped on purpose
+(in [`scripts/model-skips.json`](scripts/model-skips.json)), and a weekly CI job opens or
+updates one issue with them.
 
 ### Embeddings (InvokeModel API)
 
@@ -202,8 +214,12 @@ weekly and on every registry change.
 | Amazon Titan Multimodal Embeddings | `titan-multimodal` | 1024 |
 | Cohere Embed v4 | `cohere` | 1536 |
 
-`bedrock_embed_similarity` only sends text, so Titan Multimodal is exercised through
-its text path here and behaves like `titan-v2` at the same 1024 dimensions. The Cohere
+`bedrock_embed_similarity` takes `texts`, and `images` (local JPEG or PNG paths) for the two
+multimodal models, `titan-multimodal` and `cohere`; `titan-v2` embeds text only and refuses
+an image before any call. At least 2 inputs and at most 50 across both lists, and the
+matrix labels an image by its file name. Cohere Embed v4 images can be up to 5 MB; WebP is
+not read. Text-only input to Titan Multimodal behaves like `titan-v2` at the same 1024
+dimensions. The Cohere
 Embed v3 aliases (`cohere-en`, `cohere-multi`) now resolve to Embed v4, which covers
 English and multilingual text. Titan embeds one text per request, so this server sends
 8 at a time.
@@ -279,6 +295,15 @@ Same server block, in `claude_desktop_config.json`:
 }
 ```
 
+### Install the `.mcpb` bundle in Claude Desktop
+
+Each GitHub release carries `bedrock-multi-model-mcp-<version>.mcpb`, an MCP Bundle that Claude Desktop
+and other MCPB hosts install in one click, with no Node setup or config file to edit. Download it from the
+[releases page](https://github.com/Sagargupta16/bedrock-multi-model-mcp/releases) and open it. The install
+dialog asks for the Bedrock API key (leave it empty to use your AWS credential chain), the region, the
+output folder and the files folder. To build it yourself, run `npm run pack:mcpb`: it builds, then writes
+the file into the repo root, with its version taken from `package.json`.
+
 ### Run from source
 
 To change the server or pin it to a local build, clone and build it, then point the MCP
@@ -306,6 +331,7 @@ cwd" behavior cannot apply and generated images fall back to `~/bedrock-images/`
 | `AWS_SECRET_ACCESS_KEY` | - | AWS secret key (if not using bearer token/SSO) |
 | `AWS_PROFILE` | - | Named AWS profile from `~/.aws/credentials` |
 | `BEDROCK_MCP_OUTPUT_DIR` | cwd (or `~/bedrock-images` if cwd is not writable) | Default output directory for generated images. Overridden by the `output_dir` tool arg. Directory is auto-created. |
+| `BEDROCK_MCP_FILES_ROOT` | the server's working folder | The one folder the `files` option may read from. Paths in `files` are relative to it, and anything outside it is refused. When it is unset and the working folder is a home folder or a drive root, `files` is off until you set it. |
 
 ### Authentication
 
@@ -380,6 +406,54 @@ that fails loses its turn, the next one carries on, and the failure is not menti
 it. Turns run sequentially and each is billed: models x rounds generations, plus one for
 the summary.
 
+### Pick models by level
+
+```
+"Use bedrock_compare with level cheap: What is the difference between a mutex and a semaphore?"
+```
+
+`level` is `cheap`, `medium` or `intense`, the same three presets `bedrock_panel` uses, and works on
+`bedrock_ask`, `bedrock_compare` and `bedrock_judge`: `bedrock_ask` uses the first model of the level
+(`nova-micro`, `claude-haiku` or `fable`), the others use all three. `model` or `models` wins over `level` in
+`bedrock_compare` and `bedrock_judge`; `bedrock_ask` refuses both together. `level` never changes the judge.
+
+### Add local files to the prompt
+
+```
+"Use bedrock_ask with claude-sonnet and files ['src/index.ts']: Summarize what this file does"
+```
+
+`files` works on `bedrock_ask`, `bedrock_compare`, `bedrock_judge` and `bedrock_panel`. Paths are relative to
+`BEDROCK_MCP_FILES_ROOT` (default the server's working folder), and files outside that folder are refused. Up to
+10 text files, 256 KB each and 1 MB in total; names like `.env`, `.npmrc`, `.git-credentials` and private keys,
+anything under `.ssh` or `.aws`, network paths (`\\host\share`), binary files and missing files are refused, and
+a refusal fails the call before any model is billed. A desktop client can start the server in your home folder:
+the default is refused there, so set `BEDROCK_MCP_FILES_ROOT` to a project folder. The content goes to the
+model provider, as part of the prompt, and with `conversation_id` it is sent again on each follow-up.
+
+### Follow up in a conversation
+
+```
+"Use bedrock_ask with kimi and conversation_id design-review: Outline a retry policy for an SQS consumer"
+"Use bedrock_ask with kimi and conversation_id design-review: Now add a dead-letter queue to that"
+```
+
+Calls with the same `conversation_id` send the earlier turns along as context. The id is 1 to 64 letters,
+digits, `-` or `_`. Conversations live in the server's memory only: they end 30 minutes after the last turn
+or when the server restarts, and hold at most 20 turns. Without `conversation_id` every call stands alone.
+
+### Check which models work on your account
+
+```
+"Use bedrock_doctor"
+"Use bedrock_doctor with models nova-pro and kimi"
+```
+
+Sends one small billed call (a one-word prompt, at most 32 output tokens) to every text model in the registry, or
+only the models you name, and returns a table with `ok`, `throttled` (a rate or quota limit right now),
+`denied` (no model access on this account), `invalid` (not in the registry, or not offered in this region) or
+`error`, plus latency and a short note. `concurrency` (1 to 8, default 4) sets how many run at once.
+
 ### Generate an image
 
 ```
@@ -397,20 +471,26 @@ the summary.
 
 ```
 "Use bedrock_generate_video: Closeup of ocean waves crashing on rocks at sunset, s3_uri: s3://my-bucket/videos/"
+"Use bedrock_generate_video with start_image_path ./first.png and end_image_path ./last.png: The camera pulls back from the door, s3_uri: s3://my-bucket/videos/"
 ```
+
+Either keyframe image alone also works.
 
 ### Compare text similarity
 
 ```
 "Use bedrock_embed_similarity to compare: 'a cat', 'a kitten', 'a car'"
+"Use bedrock_embed_similarity with titan-multimodal to compare the text 'a cat' with images ./cat.png and ./car.png"
 ```
+
+Image inputs need a multimodal model (`titan-multimodal` or `cohere`).
 
 ## Architecture
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="docs/diagrams/architecture-light.svg">
-  <img width="880" src="docs/diagrams/architecture-light.svg" alt="How a tool call reaches Bedrock: an MCP client such as Claude Code or Claude Desktop sends JSON-RPC over stdio to the 9 MCP tools of the bedrock-multi-model-mcp server, defined in index.ts with Zod input schemas. bedrock_list_models reads the model registries directly; every other tool calls an API wrapper (converse, image, edit, video or embed), which takes the model's alias, region and request shape from the registries in src/data/*.json, checked with Zod at load. The wrapper sends the request through the Bedrock client, one cached SDK client per region, which authenticates with the bearer token or the IAM credential chain; a cancelled tool call aborts its Bedrock request. Gemma 4 calls go from the wrappers straight to Bedrock's bedrock-mantle endpoint over HTTPS with the bearer token. Converse and embedding calls (InvokeModel) go to Amazon Bedrock in us-east-1, or the region AWS_REGION sets. Image calls (InvokeModel, Stability) and video jobs (StartAsyncInvoke, Luma Ray 2) go to Amazon Bedrock in us-west-2, where the asynchronous video job writes the MP4 to the S3 bucket named by the s3_uri argument. The image wrapper decodes the returned image and saves it as a local PNG file in output_dir, BEDROCK_MCP_OUTPUT_DIR or the working directory.">
+  <img width="880" src="docs/diagrams/architecture-light.svg" alt="How a tool call reaches Bedrock: an MCP client such as Claude Code or Claude Desktop sends JSON-RPC over stdio to the 11 MCP tools of the bedrock-multi-model-mcp server, defined in index.ts with Zod input schemas. bedrock_list_models reads the model registries directly; every other tool calls an API wrapper (converse, image, edit, video or embed), which takes the model's alias, region and request shape from the registries in src/data/*.json, checked with Zod at load. The wrapper sends the request through the Bedrock client, one cached SDK client per region, which authenticates with the bearer token or the IAM credential chain; a cancelled tool call aborts its Bedrock request. Gemma 4 calls go from the wrappers straight to Bedrock's bedrock-mantle endpoint over HTTPS with the bearer token. Converse and embedding calls (InvokeModel) go to Amazon Bedrock in us-east-1, or the region AWS_REGION sets. Image calls (InvokeModel, Stability) and video jobs (StartAsyncInvoke, Luma Ray 2) go to Amazon Bedrock in us-west-2, where the asynchronous video job writes the MP4 to the S3 bucket named by the s3_uri argument. The image wrapper decodes the returned image and saves it as a local PNG file in output_dir, BEDROCK_MCP_OUTPUT_DIR or the working directory.">
 </picture>
 
 The spec behind the picture is [`docs/diagrams/architecture.yaml`](docs/diagrams/architecture.yaml), rendered with [orrery](https://github.com/Sagargupta16/orrery).
@@ -428,6 +508,11 @@ src/
   index.ts          # MCP server - tool registration, stdio transport
   judge.ts          # bedrock_judge - blind labels, judge prompt, verdict parsing
   panel.ts          # bedrock_panel - roles, each model's view of the discussion, rounds, summary
+  doctor.ts         # bedrock_doctor - one small call per text model, status per model
+  files.ts          # `files` option - root folder, limits, refusals, prompt blocks
+  cost.ts           # Estimated cost from the registry `price`
+  conversation.ts   # conversation_id - in-memory follow-up turns with size and time limits
+  prompts.ts        # MCP prompts: second-opinion, compare-models, panel-discussion
   models.ts         # Loads + validates registry data, resolves aliases
   types.ts          # Zod schemas for model data validation
   bedrock/
@@ -436,8 +521,8 @@ src/
     mantle.ts       # bedrock-mantle Chat Completions wrapper (Gemma 4)
     image.ts        # InvokeModel wrapper (image models)
     edit.ts         # InvokeModel wrapper (Stability image-edit services)
-    video.ts        # Async invoke wrapper (video models)
-    embed.ts        # InvokeModel wrapper (embeddings) + cosine similarity
+    video.ts        # Async invoke wrapper (video models), Luma Ray 2 keyframes
+    embed.ts        # InvokeModel wrapper (embeddings, text and image inputs) + cosine similarity
   data/
     text-models.json       # Text model registry (data, not code)
     image-models.json      # Image model registry
@@ -448,6 +533,11 @@ scripts/
   call-tool.mjs     # Minimal stdio MCP client: list tools or call one
   benchmark.mjs     # Latency benchmark across every text model
   check-lifecycle.mjs # Fails if a registry model is Legacy or EOL on AWS's lifecycle page
+  check-new-models.mjs # Lists Bedrock model cards the catalog neither has nor skips on purpose
+  model-skips.json  # Model cards deliberately not in the catalog, with the reason
+  pack-mcpb.mjs     # Builds the one-click .mcpb bundle (npm run pack:mcpb)
+mcpb/
+  manifest.json     # Bundle manifest; its version is stamped from package.json at pack time
 ```
 
 Model definitions are data, kept in `src/data/*.json` and validated against Zod schemas at load time, so the catalog can be updated without changing logic. The build copies these JSON files into `dist/data/`.

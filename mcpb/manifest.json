@@ -1,0 +1,115 @@
+{
+  "manifest_version": "0.3",
+  "name": "bedrock-multi-model-mcp",
+  "display_name": "Bedrock Multi-Model",
+  "version": "0.0.0",
+  "description": "AWS Bedrock models as MCP tools: ask, compare, judge and panel Claude, GPT, Grok, Kimi, Gemma, Mistral, Nova, Qwen and DeepSeek, plus image, video and embeddings.",
+  "long_description": "Ask one Bedrock text model, compare 2-5 side by side, have a judge score them blind, or run a turn-by-turn panel discussion. Also generates and edits images, generates video and compares text with embeddings. Needs an AWS account with Bedrock model access: paste a Bedrock API key below, or leave it empty to use your AWS credential chain (profile, environment or SSO).",
+  "author": {
+    "name": "Sagar Gupta",
+    "url": "https://github.com/Sagargupta16"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sagargupta16/bedrock-multi-model-mcp.git"
+  },
+  "homepage": "https://github.com/Sagargupta16/bedrock-multi-model-mcp",
+  "documentation": "https://github.com/Sagargupta16/bedrock-multi-model-mcp#readme",
+  "support": "https://github.com/Sagargupta16/bedrock-multi-model-mcp/issues",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {
+        "AWS_BEARER_TOKEN_BEDROCK": "${user_config.AWS_BEARER_TOKEN_BEDROCK}",
+        "AWS_REGION": "${user_config.AWS_REGION}",
+        "BEDROCK_MCP_OUTPUT_DIR": "${user_config.BEDROCK_MCP_OUTPUT_DIR}",
+        "BEDROCK_MCP_FILES_ROOT": "${user_config.BEDROCK_MCP_FILES_ROOT}"
+      }
+    }
+  },
+  "user_config": {
+    "AWS_BEARER_TOKEN_BEDROCK": {
+      "type": "string",
+      "title": "Bedrock API key",
+      "description": "Amazon Bedrock API key (bearer token). Leave empty to use the standard AWS credential chain instead.",
+      "sensitive": true,
+      "required": false
+    },
+    "AWS_REGION": {
+      "type": "string",
+      "title": "AWS region",
+      "description": "Region for text models. Image and video models use us-west-2 regardless.",
+      "default": "us-east-1",
+      "required": false
+    },
+    "BEDROCK_MCP_OUTPUT_DIR": {
+      "type": "directory",
+      "title": "Output folder",
+      "description": "Where generated images and videos are saved. Empty uses the working directory, then ~/bedrock-images.",
+      "required": false
+    },
+    "BEDROCK_MCP_FILES_ROOT": {
+      "type": "directory",
+      "title": "Files folder",
+      "description": "The folder the files option may read text files from. Empty uses the folder the server starts in; file input stays off when that is a home folder or a drive root.",
+      "required": false
+    }
+  },
+  "tools": [
+    {
+      "name": "bedrock_ask",
+      "description": "Prompt one text model, optionally with a JSON schema or effort level."
+    },
+    {
+      "name": "bedrock_compare",
+      "description": "Send one prompt to 2-5 models and show the answers side by side."
+    },
+    {
+      "name": "bedrock_judge",
+      "description": "2-5 models answer, a judge model scores them blind and picks a winner."
+    },
+    {
+      "name": "bedrock_panel",
+      "description": "2-5 models discuss one prompt in turn, each seeing the earlier turns."
+    },
+    {
+      "name": "bedrock_list_models",
+      "description": "List the available text, image, video and embedding models."
+    },
+    {
+      "name": "bedrock_generate_image",
+      "description": "Generate an image from a prompt and save it locally."
+    },
+    {
+      "name": "bedrock_edit_image",
+      "description": "Run one of the Stability image edit services on a local image."
+    },
+    {
+      "name": "bedrock_generate_video",
+      "description": "Start a video generation job."
+    },
+    {
+      "name": "bedrock_video_status",
+      "description": "Check a video generation job and fetch the result."
+    },
+    {
+      "name": "bedrock_embed_similarity",
+      "description": "Cosine-similarity matrix across two or more texts."
+    },
+    {
+      "name": "bedrock_doctor",
+      "description": "Probe every text model and report which work on this account."
+    }
+  ],
+  "keywords": ["aws", "bedrock", "mcp", "claude", "multi-model", "image-generation", "embeddings"],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=22.0.0"
+    }
+  }
+}

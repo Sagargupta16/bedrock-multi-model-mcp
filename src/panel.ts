@@ -1,4 +1,5 @@
 import { converse, effortFor, type ConverseOptions, type ConverseResult } from "./bedrock/converse.js";
+import { estimateCost, formatCostTotal, sumCosts } from "./cost.js";
 import { getModelInfo, resolveModelId } from "./models.js";
 import type { EffortLevel } from "./types.js";
 
@@ -64,8 +65,9 @@ export const ROLES: Record<string, Role> = Object.fromEntries(
   ).map((r) => [r.id, r]),
 );
 
-// Default panels per level, by alias. The registry carries no prices, so each
-// level is a tier: the small fast models, the mid tier, the newest flagships.
+// Default panels per level, by alias, shared by bedrock_ask (first model),
+// bedrock_compare, bedrock_judge and bedrock_panel. Each level is a tier: the
+// small fast models, the mid tier, the newest flagships.
 // One model per provider, all current (none is marked "Previous-gen"), and none
 // of the models that were throttled on every call on 2026-11-19.
 export const LEVEL_IDS = ["cheap", "medium", "intense"] as const;
@@ -91,6 +93,33 @@ export function levelHelp(): string {
     });
     return `${level} (${names.join(", ")})`;
   }).join("; ");
+}
+
+// The model list of a multi-model call (bedrock_compare, bedrock_judge, bedrock_panel):
+// models when given, and level is then ignored; otherwise the level's default list.
+export function pickModels(tool: string, models?: string[], level?: Level): string[] {
+  const requested = models ?? (level ? LEVELS[level] : undefined);
+  if (!requested) throw new Error(`${tool} needs models, or a level to pick a default panel.`);
+  if (requested.length < MIN_MODELS || requested.length > MAX_MODELS) {
+    throw new Error(`${tool} needs ${MIN_MODELS} to ${MAX_MODELS} models, got ${requested.length}.`);
+  }
+  return requested;
+}
+
+// The one model of bedrock_ask: model, or the first model of the level's list.
+export function pickModel(model?: string, level?: Level): string {
+  if (model !== undefined && level) {
+    throw new Error("bedrock_ask takes model or level, not both; drop one of them.");
+  }
+  if (model !== undefined) return model;
+  if (level) return LEVELS[level][0];
+  throw new Error("bedrock_ask needs model, or a level to pick one.");
+}
+
+// "~$0.0123" summed over the answered calls from the registry prices, "" when none
+// is priced. A model outside the registry has no price; the total then says how many were.
+export function costTotal(results: ConverseResult[]): string {
+  return formatCostTotal(sumCosts(results.map((r) => estimateCost(r.modelId, r.inputTokens, r.outputTokens))));
 }
 
 // A free-text role cut to LABEL_LIMIT characters at a word.
@@ -127,13 +156,7 @@ export interface SeatOptions {
 
 // Turns the models and roles of a call into seats, or throws the first thing wrong with them.
 export function resolveSeats(options: SeatOptions): Seat[] {
-  const requested = options.models ?? (options.level ? LEVELS[options.level] : undefined);
-  if (!requested) throw new Error("bedrock_panel needs models, or a level to pick a default panel.");
-
-  const ids = requested.map(resolveModelId);
-  if (ids.length < MIN_MODELS || ids.length > MAX_MODELS) {
-    throw new Error(`bedrock_panel needs ${MIN_MODELS} to ${MAX_MODELS} models, got ${ids.length}.`);
-  }
+  const ids = pickModels("bedrock_panel", options.models, options.level).map(resolveModelId);
   if (options.roles && options.roles.length !== ids.length) {
     throw new Error(
       `roles has ${options.roles.length} entries but the panel has ${ids.length} models; ` +
@@ -378,6 +401,7 @@ export function formatPanelReport(report: PanelReport): string {
 
   const results = [...turns.map((t) => t.result), summary?.result].filter((r): r is ConverseResult => !!r);
   const answered = turns.filter((t) => t.result).length;
+  const cost = costTotal(results);
   out.push(
     "",
     "---",
@@ -385,7 +409,7 @@ export function formatPanelReport(report: PanelReport): string {
     `*Totals: ${answered}/${turns.length} turns answered | ` +
       `${results.reduce((n, r) => n + r.inputTokens, 0)} in / ` +
       `${results.reduce((n, r) => n + r.outputTokens, 0)} out tokens | ` +
-      `${seconds(results.reduce((n, r) => n + r.latencyMs, 0))} model time*`,
+      `${seconds(results.reduce((n, r) => n + r.latencyMs, 0))} model time${cost ? ` | Est. cost: ${cost}` : ""}*`,
   );
   return out.join("\n");
 }

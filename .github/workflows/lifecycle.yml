@@ -28,3 +28,43 @@ jobs:
           node-version: 26
       # Node built-ins and fetch only, so there is nothing to install.
       - run: node scripts/check-lifecycle.mjs
+
+  # Weekly check for Bedrock model cards the catalog neither has nor has skipped
+  # on purpose (scripts/model-skips.json). Opens or updates one issue; never runs
+  # on pull requests.
+  new-models:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - run: node scripts/check-new-models.mjs --json > new-models.json
+      - name: Open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_TITLE: New Bedrock model cards not in the catalog
+        run: |
+          count=$(jq '.new | length' new-models.json)
+          if [ "$count" -eq 0 ]; then
+            echo "No new model cards."
+            exit 0
+          fi
+          {
+            echo "These Bedrock model cards are neither in the catalog nor in scripts/model-skips.json:"
+            echo
+            jq -r '.new[] | "- [" + .name + "](" + .url + "): " + (if (.ids | length) > 0 then (.ids | map("`" + . + "`") | join(", ")) else "no model id listed" end)' new-models.json
+            echo
+            echo "Add each model after a live probe, or add it to scripts/model-skips.json with a reason."
+          } > issue-body.md
+          number=$(gh issue list --state open --search "$ISSUE_TITLE in:title" --json number,title --jq ".[] | select(.title == \"$ISSUE_TITLE\") | .number" | head -n 1)
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body-file issue-body.md
+          else
+            gh issue create --title "$ISSUE_TITLE" --body-file issue-body.md
+          fi

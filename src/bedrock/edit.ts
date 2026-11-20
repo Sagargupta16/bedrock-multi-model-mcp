@@ -1,6 +1,7 @@
 import { InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
+import { isNetworkPath } from "../files.js";
 import { loadRegistry } from "../models.js";
 import { ImageEditModelSchema, type EditField, type ImageEditModel } from "../types.js";
 import { getClient } from "./client.js";
@@ -94,13 +95,33 @@ export function buildEditBody(
 // (the formats the services take) are sent, so a mistyped path never ships some
 // other local file to Bedrock.
 async function readImage(path: string): Promise<string> {
+  return (await readImageFile(path)).bytes.toString("base64");
+}
+
+// No Bedrock image input comes near this size; the cap keeps a mistyped path to
+// some huge file from being read into memory.
+export const MAX_IMAGE_FILE_BYTES = 25 * 1024 * 1024;
+
+// Reads a local image and identifies it from its magic bytes (never the
+// extension). Shared with the video keyframe and embedding image readers.
+// Network and device paths are refused before any file call: opening one on
+// Windows offers the user's credentials to the named host.
+export async function readImageFile(
+  path: string,
+): Promise<{ full: string; bytes: Buffer; mediaType: "image/png" | "image/jpeg" | "image/webp" }> {
+  if (isNetworkPath(path)) throw new Error(`${path}: network and device paths are refused`);
   const full = isAbsolute(path) ? path : resolve(process.cwd(), path);
+  const info = await stat(full);
+  if (!info.isFile()) throw new Error(`${full} is not a file`);
+  if (info.size > MAX_IMAGE_FILE_BYTES) {
+    throw new Error(`${full} is ${info.size} bytes, over the ${MAX_IMAGE_FILE_BYTES / 1048576} MB limit for an input image`);
+  }
   const bytes = await readFile(full);
   const isPng = bytes.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   const isJpeg = bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
   const isWebp = bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
   if (!isPng && !isJpeg && !isWebp) throw new Error(`${full} is not a PNG, JPEG or WebP image`);
-  return bytes.toString("base64");
+  return { full, bytes, mediaType: isPng ? "image/png" : isJpeg ? "image/jpeg" : "image/webp" };
 }
 
 export async function editImage(options: EditOptions): Promise<EditResult> {

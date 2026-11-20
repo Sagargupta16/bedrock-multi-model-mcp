@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { converse, effortFor, type ConverseOptions, type ConverseResult } from "./bedrock/converse.js";
 import { getModelInfo, resolveModelId } from "./models.js";
+import { costTotal, pickModels, type Level } from "./panel.js";
 import type { EffortLevel } from "./types.js";
 
 // bedrock_judge: N candidate models answer the same prompt, then a judge model
@@ -137,7 +138,9 @@ export function parseVerdict(text: string, labels: string[]): Verdict | undefine
 }
 
 export interface JudgeOptions {
-  models: string[];
+  // Candidates; when absent, the level's default list. The judge model is not affected by level.
+  models?: string[];
+  level?: Level;
   prompt: string;
   system?: string;
   temperature?: number;
@@ -165,7 +168,7 @@ export async function runJudge(
   ask: (o: ConverseOptions) => Promise<ConverseResult> = converse,
   random: () => number = Math.random,
 ): Promise<JudgeReport> {
-  const candidates = assignLabels(options.models, random);
+  const candidates = assignLabels(pickModels("bedrock_judge", options.models, options.level), random);
   const judgeId = resolveModelId(options.judge ?? DEFAULT_JUDGE);
 
   const settled = await Promise.allSettled(
@@ -286,13 +289,19 @@ export function formatJudgeReport(report: JudgeReport): string {
     out.push("", "**Failed:** " + failed.map((c) => `${c.name} - ${c.error}`).join("; "));
   }
 
+  if (judgeResult) {
+    out.push(
+      "",
+      `*Judge: ${judgeResult.inputTokens} in / ${judgeResult.outputTokens} out | ${seconds(judgeResult.latencyMs)}*`,
+    );
+  }
+  // Every answered call, the judge's included.
+  const cost = costTotal(
+    [...candidates.map((c) => c.result), judgeResult].filter((r): r is ConverseResult => !!r),
+  );
+  if (cost) out.push("", `*Est. cost: ${cost} total, answers${judgeResult ? " plus judge" : ""}*`);
+
   if (judgeResult || report.judgeError) {
-    if (judgeResult) {
-      out.push(
-        "",
-        `*Judge: ${judgeResult.inputTokens} in / ${judgeResult.outputTokens} out | ${seconds(judgeResult.latencyMs)}*`,
-      );
-    }
     for (const c of candidates.filter((x) => x.result)) {
       out.push("", "---", "", `### Answer ${c.label}: ${c.name}`, "", c.result!.text);
     }

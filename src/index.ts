@@ -3,15 +3,30 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { readFileSync } from "node:fs";
+import { basename } from "node:path";
 import { z } from "zod";
 import { converse, effortFor, type ConverseResult } from "./bedrock/converse.js";
 import { generateImage, getImageModel } from "./bedrock/image.js";
 import { editImage, EDIT_MODELS, STYLE_PRESETS, EDIT_ASPECT_RATIOS, OUTPUT_FORMATS } from "./bedrock/edit.js";
 import { startVideoGeneration, getVideoStatus } from "./bedrock/video.js";
-import { embed, cosineSimilarity, getEmbeddingModel } from "./bedrock/embed.js";
+import { embedInputs, cosineSimilarity, getEmbeddingModel, type EmbedInput } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
 import { runJudge, formatJudgeReport } from "./judge.js";
-import { runPanel, formatPanelReport, levelHelp, LEVEL_IDS, MAX_ROLE_LENGTH } from "./panel.js";
+import {
+  runPanel,
+  formatPanelReport,
+  levelHelp,
+  pickModel,
+  pickModels,
+  costTotal,
+  LEVEL_IDS,
+  MAX_ROLE_LENGTH,
+} from "./panel.js";
+import { runDoctor, formatDoctorReport } from "./doctor.js";
+import { loadFiles, withFiles, filesHelp } from "./files.js";
+import { estimateCost, formatCost } from "./cost.js";
+import { conversations, conversationHelp, CONVERSATION_ID_PATTERN } from "./conversation.js";
+import { registerPrompts } from "./prompts.js";
 import { EFFORT_LEVELS } from "./types.js";
 
 // Read the version from package.json (one directory above the compiled
@@ -38,6 +53,22 @@ const schemaParam = z.record(z.string(), z.unknown()).optional().describe(
   "DeepSeek V3.2, MiniMax M2.5 and Nemotron 3 Super; not by Nova, Pixtral or Magistral Small."
 );
 const maxTokensParam = z.number().int().positive().optional();
+const filesParam = z.array(z.string()).optional().describe(
+  "Local text file paths, relative to the files root (BEDROCK_MCP_FILES_ROOT or the server's working folder). " +
+  "Each file is appended to the prompt and its content is sent to the model provider."
+);
+// The files sentence every text tool description carries.
+const filesNote = `files: ${filesHelp()} A refused file fails the call before any model is billed.`;
+
+// Reads the files of a call before any model call: a refusal throws, so the tool
+// returns it as its error and nothing is billed. The line names what was attached.
+async function attachFiles(prompt: string, paths: string[] | undefined): Promise<{ prompt: string; line: string }> {
+  const files = paths && paths.length > 0 ? await loadFiles(paths) : [];
+  const line = files.length > 0
+    ? `Files: ${files.map((f) => `${f.path} (${f.bytes} bytes)`).join(", ")}\n`
+    : "";
+  return { prompt: withFiles(prompt, files), line };
+}
 
 // A schema reply is shown as pretty JSON; when it did not parse, the raw text follows a note.
 function replyBody(result: ConverseResult, schemaSent: boolean): string {
@@ -60,11 +91,18 @@ server.registerTool(
     description:
       "Send a prompt to any AWS Bedrock model via the Converse API. " +
       "Supports Claude, GPT, Grok, Kimi, Gemma, Mistral, Nova, Qwen, DeepSeek, and more. " +
-      "Use short aliases (e.g. 'claude-sonnet', 'nova-pro') or full model IDs. " +
-      "Pass schema to get JSON that matches it, and effort to set the thinking depth.",
+      "Use short aliases (e.g. 'claude-sonnet', 'nova-pro') or full model IDs, or pass level instead of model " +
+      "to use the first model of that level. " +
+      "Pass schema to get JSON that matches it, and effort to set the thinking depth. " +
+      `${filesNote} ${conversationHelp()} ` +
+      "The reply header shows the tokens and an estimated cost from list prices.",
     inputSchema: {
-      model: z.string().describe(
-        "Model alias (e.g. 'claude-opus', 'kimi', 'mistral-large', 'nova-pro', 'deepseek') or full Bedrock model ID"
+      model: z.string().optional().describe(
+        "Model alias (e.g. 'claude-opus', 'kimi', 'mistral-large', 'nova-pro', 'deepseek') or full Bedrock model ID. " +
+        "Required unless level is given; model and level together is an error."
+      ),
+      level: z.enum(LEVEL_IDS).optional().describe(
+        `Use the first model of a level instead of model: ${levelHelp()}.`
       ),
       prompt: z.string().describe("The user prompt to send to the model"),
       system: z.string().optional().describe("Optional system prompt"),
@@ -72,14 +110,33 @@ server.registerTool(
       max_tokens: maxTokensParam.describe("Maximum tokens to generate"),
       effort: effortParam,
       schema: schemaParam,
+      files: filesParam,
+      conversation_id: z.string().optional().describe(
+        "Follow-up conversation id (1-64 letters, digits, '-' or '_'); omit for a one-off call. See the tool description."
+      ),
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ model, prompt, system, temperature, max_tokens, effort, schema }, { signal }) => {
+  async (
+    { model, level, prompt, system, temperature, max_tokens, effort, schema, files, conversation_id },
+    { signal },
+  ) => {
     try {
+      // Everything that can be refused is checked before the billed call.
+      const modelId = pickModel(model, level);
+      if (conversation_id !== undefined && !CONVERSATION_ID_PATTERN.test(conversation_id)) {
+        throw new Error(
+          `Invalid conversation_id: use 1 to 64 letters, digits, "-" or "_" (pattern ${CONVERSATION_ID_PATTERN.source}).`
+        );
+      }
+      const attached = await attachFiles(prompt, files);
+      const turn = conversation_id !== undefined ? conversations.turns(conversation_id).length + 1 : 0;
+
       const result = await converse({
-        modelId: model,
-        prompt,
+        modelId,
+        prompt: conversation_id !== undefined
+          ? conversations.buildPrompt(conversation_id, attached.prompt)
+          : attached.prompt,
         system,
         temperature,
         maxTokens: max_tokens,
@@ -88,11 +145,27 @@ server.registerTool(
         signal,
       });
 
+      // The turn keeps the prompt as sent with its file blocks, so a follow-up still has the files.
+      let conversationLine = "";
+      if (conversation_id !== undefined) {
+        const kept = conversations.append(conversation_id, {
+          prompt: attached.prompt,
+          reply: result.text,
+          modelId: result.modelId,
+        });
+        conversationLine = `Conversation: ${conversation_id}, turn ${turn}` +
+          `${kept ? "" : " (not kept: empty reply or over the size cap, so later turns will not see it)"}\n`;
+      }
+
       const info = getModelInfo(result.modelId);
       const modelLabel = info ? `${info.name} (${info.provider})` : result.modelId;
+      const cost = costTotal([result]);
 
       const header = `**${modelLabel}**\n` +
+        attached.line +
+        conversationLine +
         `Tokens: ${result.inputTokens} in / ${result.outputTokens} out | ` +
+        `${cost ? `Est. cost: ${cost} | ` : ""}` +
         `Latency: ${(result.latencyMs / 1000).toFixed(1)}s | ` +
         `Stop: ${result.stopReason}${effort ? ` | Effort: ${effort}` : ""}\n\n---\n\n`;
 
@@ -110,10 +183,17 @@ server.registerTool(
   {
     description:
       "Send the same prompt to multiple Bedrock models and compare responses side by side. " +
-      "Useful for evaluating model quality, speed, and style differences.",
+      "Useful for evaluating model quality, speed, and style differences. " +
+      `Pass level instead of models for a default set of three: ${levelHelp()}; models wins when both are given. ` +
+      `${filesNote} ` +
+      "Each answer shows its tokens and an estimated cost from list prices, with the total at the end.",
     inputSchema: {
-      models: z.array(z.string()).min(2).max(5).describe(
-        "List of 2-5 model aliases or IDs to compare (e.g. ['kimi', 'nova-pro', 'mistral-large'])"
+      models: z.array(z.string()).min(2).max(5).optional().describe(
+        "List of 2-5 model aliases or IDs to compare (e.g. ['kimi', 'nova-pro', 'mistral-large']). " +
+        "Required unless level is given."
+      ),
+      level: z.enum(LEVEL_IDS).optional().describe(
+        `Default models when models is absent: ${levelHelp()}. Ignored when models is given.`
       ),
       prompt: z.string().describe("The prompt to send to all models"),
       system: z.string().optional().describe("Optional system prompt sent to all models"),
@@ -121,10 +201,20 @@ server.registerTool(
       max_tokens: maxTokensParam.describe("Maximum tokens per model response"),
       effort: effortParam,
       schema: schemaParam,
+      files: filesParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ models, prompt, system, temperature, max_tokens, effort, schema }, { signal }) => {
+  async ({ models: given, level, prompt: question, system, temperature, max_tokens, effort, schema, files }, { signal }) => {
+    let models: string[];
+    let attached: { prompt: string; line: string };
+    try {
+      models = pickModels("bedrock_compare", given, level);
+      attached = await attachFiles(question, files);
+    } catch (err) {
+      return errorResult(err);
+    }
+    const prompt = attached.prompt;
     const results = await Promise.allSettled(
       models.map((m) =>
         converse({
@@ -150,9 +240,11 @@ server.registerTool(
       if (result.status === "fulfilled") {
         const r = result.value;
         const applied = effortFor(models[i], effort);
+        const cost = formatCost(estimateCost(r.modelId, r.inputTokens, r.outputTokens));
         sections.push(
           `## ${label}\n` +
           `*Tokens: ${r.inputTokens} in / ${r.outputTokens} out | ` +
+          `${cost ? `${cost} | ` : ""}` +
           `Latency: ${(r.latencyMs / 1000).toFixed(1)}s${applied ? ` | Effort: ${applied}` : ""}*\n\n` +
           replyBody(r, !!schema)
         );
@@ -162,9 +254,16 @@ server.registerTool(
       }
     }
 
+    // One estimate label per reply, on the total of the answered models.
+    const total = costTotal(
+      results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
+    );
+    const text = attached.line + (attached.line ? "\n" : "") + sections.join("\n\n---\n\n") +
+      (total ? `\n\n---\n\n*Est. cost: ${total} total*` : "");
+
     // Partial failures are part of a comparison; only an all-failed call is an error.
     const allFailed = results.every((r) => r.status === "rejected");
-    return { content: [{ type: "text" as const, text: sections.join("\n\n---\n\n") }], isError: allFailed };
+    return { content: [{ type: "text" as const, text }], isError: allFailed };
   }
 );
 
@@ -176,10 +275,18 @@ server.registerTool(
     description:
       "Send the same prompt to 2-5 Bedrock models, then have a judge model (default Claude Opus) " +
       "score the answers blind - shuffled and labeled A/B/C with model names hidden - and pick a winner. " +
-      "Set synthesize to also get one merged answer that keeps the best of each.",
+      "Set synthesize to also get one merged answer that keeps the best of each. " +
+      `Pass level instead of models for three default candidates: ${levelHelp()}; models wins when both are ` +
+      "given, and level never changes the judge. " +
+      `${filesNote} The files reach the candidates and the judge. ` +
+      "The report ends with an estimated cost from list prices for the answers plus the judge call.",
     inputSchema: {
-      models: z.array(z.string()).min(2).max(5).describe(
-        "List of 2-5 candidate model aliases or IDs (e.g. ['kimi', 'nova-pro', 'deepseek'])"
+      models: z.array(z.string()).min(2).max(5).optional().describe(
+        "List of 2-5 candidate model aliases or IDs (e.g. ['kimi', 'nova-pro', 'deepseek']). " +
+        "Required unless level is given."
+      ),
+      level: z.enum(LEVEL_IDS).optional().describe(
+        `Default candidates when models is absent: ${levelHelp()}. Ignored when models is given; not the judge.`
       ),
       prompt: z.string().describe("The prompt every candidate answers"),
       judge: z.string().optional().describe("Judge model alias or ID (default 'claude-opus')"),
@@ -191,14 +298,22 @@ server.registerTool(
       temperature: z.number().min(0).max(1).optional().describe("Sampling temperature for the candidates"),
       max_tokens: maxTokensParam.describe("Maximum tokens per candidate response"),
       effort: effortParam,
+      files: filesParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ models, prompt, judge, criteria, synthesize, system, temperature, max_tokens, effort }, { signal }) => {
+  async (
+    { models, level, prompt, judge, criteria, synthesize, system, temperature, max_tokens, effort, files },
+    { signal },
+  ) => {
     try {
+      // Checked here too, so a bad model list fails before the files are read.
+      pickModels("bedrock_judge", models, level);
+      const attached = await attachFiles(prompt, files);
       const report = await runJudge({
         models,
-        prompt,
+        level,
+        prompt: attached.prompt,
         judge,
         criteria,
         synthesize,
@@ -208,7 +323,9 @@ server.registerTool(
         effort,
         signal,
       });
-      return { content: [{ type: "text" as const, text: formatJudgeReport(report) }] };
+      return {
+        content: [{ type: "text" as const, text: attached.line + (attached.line ? "\n" : "") + formatJudgeReport(report) }],
+      };
     } catch (err) {
       return errorResult(err);
     }
@@ -227,7 +344,9 @@ server.registerTool(
       "simplifier, moderator, or your own words), run 1-3 rounds, and set summarize to a model that closes " +
       "with where the panel agrees and disagrees. Pass level instead of models for a default panel of " +
       `three: ${levelHelp()}. Turns run one after another and each is billed: models x rounds generations, ` +
-      "plus one for the summary. A model that fails loses its turn and the panel carries on.",
+      "plus one for the summary. A model that fails loses its turn and the panel carries on. " +
+      `${filesNote} The files are part of the question every turn sees. ` +
+      "The totals line gives an estimated cost from list prices for the turns plus the summary.",
     inputSchema: {
       prompt: z.string().describe("The question or task the panel discusses"),
       models: z.array(z.string()).optional().describe(
@@ -250,13 +369,15 @@ server.registerTool(
       ),
       max_tokens: maxTokensParam.describe("Maximum tokens per turn"),
       effort: effortParam,
+      files: filesParam,
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ prompt, models, roles, rounds, summarize, level, max_tokens, effort }, { signal }) => {
+  async ({ prompt, models, roles, rounds, summarize, level, max_tokens, effort, files }, { signal }) => {
     try {
+      const attached = await attachFiles(prompt, files);
       const report = await runPanel({
-        prompt,
+        prompt: attached.prompt,
         models,
         roles,
         rounds,
@@ -268,7 +389,10 @@ server.registerTool(
       });
       // Like bedrock_compare: lost turns are part of a panel, only an all-failed one is an error.
       const allFailed = report.turns.every((t) => t.error);
-      return { content: [{ type: "text" as const, text: formatPanelReport(report) }], isError: allFailed };
+      return {
+        content: [{ type: "text" as const, text: attached.line + (attached.line ? "\n" : "") + formatPanelReport(report) }],
+        isError: allFailed,
+      };
     } catch (err) {
       return errorResult(err);
     }
@@ -306,15 +430,50 @@ server.registerTool(
     }
 
     const lines: string[] = [
-      "| Model | Provider | Use case | Aliases | Capabilities |",
-      "| --- | --- | --- | --- | --- |",
+      "| Model | Provider | Use case | Aliases | Capabilities | Price per 1M tokens (in / out) |",
+      "| --- | --- | --- | --- | --- | --- |",
     ];
     for (const m of entries) {
       const caps = m.effort ? [...m.capabilities, "effort"] : m.capabilities;
-      lines.push(`| ${m.name} | ${m.provider} | ${m.useCase} | ${m.aliases.join(", ")} | ${caps.join(", ")} |`);
+      const price = m.price ? `$${m.price.input} / $${m.price.output}` : "-";
+      lines.push(
+        `| ${m.name} | ${m.provider} | ${m.useCase} | ${m.aliases.join(", ")} | ${caps.join(", ")} | ${price} |`
+      );
     }
 
     return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+  }
+);
+
+// --- Tool: bedrock_doctor ---
+// One tiny call per text model, to show which work on this AWS account right now.
+server.registerTool(
+  "bedrock_doctor",
+  {
+    description:
+      "Check which Bedrock text models work on this AWS account right now. Sends one small billed call " +
+      `(a one-word prompt, at most 32 output tokens) to each model: every registry text model ` +
+      `(${TEXT_MODELS.length}) by default, or only the models passed. Returns a table with one status per model: ` +
+      "ok (answered), throttled (rate or quota limit right now; try again later), denied (no model access " +
+      "or not authorized on this account), invalid (unknown model id, not in the registry, or not offered " +
+      "in this region), error (anything else; see the note).",
+    inputSchema: {
+      models: z.array(z.string()).min(1).max(TEXT_MODELS.length).optional().describe(
+        "Model aliases or IDs to check (default every text model in the registry); a repeated model is checked once"
+      ),
+      concurrency: z.number().int().min(1).max(8).optional().describe(
+        "Models checked at the same time, 1-8 (default 4)"
+      ),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+  async ({ models, concurrency }, { signal }) => {
+    try {
+      const report = await runDoctor({ models, concurrency, signal });
+      return { content: [{ type: "text" as const, text: formatDoctorReport(report) }] };
+    } catch (err) {
+      return errorResult(err);
+    }
   }
 );
 
@@ -484,7 +643,9 @@ server.registerTool(
       "Start a video generation job using Luma Ray 2 on AWS Bedrock. " +
       "Videos are generated asynchronously and saved to an S3 bucket. " +
       "Returns a job ARN - use bedrock_video_status to check progress. " +
-      "Note: the output S3 bucket must be in us-west-2 (the model region).",
+      "Note: the output S3 bucket must be in us-west-2 (the model region). " +
+      "Pass start_image_path and/or end_image_path to turn local images into the first and last frame " +
+      "(image-to-video); the images are checked before the job is started.",
     inputSchema: {
       model: z.string().optional().describe(
         "Video model alias: 'luma-ray' / 'ray2' (default), or a full model ID"
@@ -494,21 +655,31 @@ server.registerTool(
       duration_seconds: z.union([z.literal(5), z.literal(9)]).optional().describe(
         "Video duration in seconds: 5 (default) or 9. Luma Ray 2 supports no other value."
       ),
+      start_image_path: z.string().optional().describe(
+        "Local JPEG or PNG used as the first frame (512x512 to 4096x4096 pixels), absolute or relative to cwd"
+      ),
+      end_image_path: z.string().optional().describe(
+        "Local JPEG or PNG used as the last frame (512x512 to 4096x4096 pixels), absolute or relative to cwd"
+      ),
     },
     annotations: { openWorldHint: true },
   },
-  async ({ model, prompt, s3_uri, duration_seconds }) => {
+  // No abort signal and no retry around the start: a cancelled or repeated start can bill a job with no ARN.
+  async ({ model, prompt, s3_uri, duration_seconds, start_image_path, end_image_path }) => {
     try {
       const result = await startVideoGeneration({
         model,
         prompt,
         s3Uri: s3_uri,
         durationSeconds: duration_seconds,
+        startImagePath: start_image_path,
+        endImagePath: end_image_path,
       });
 
       const text = `**${result.modelName}** - Video generation started\n` +
         `Duration: ${result.durationSeconds}s | Resolution: 720p` +
-        `${result.region ? ` | Region: ${result.region}` : ""}\n\n` +
+        `${result.region ? ` | Region: ${result.region}` : ""}` +
+        `${result.keyframes ? ` | Keyframes: ${result.keyframes.join(", ")}` : ""}\n\n` +
         `Job ARN: \`${result.invocationArn}\`\n` +
         `Output: \`${result.s3Uri}\`\n\n` +
         `Use \`bedrock_video_status\` to check progress. ` +
@@ -565,10 +736,16 @@ server.registerTool(
     description:
       "Embed 2 or more texts with an AWS Bedrock embedding model (Amazon Titan, Cohere) and " +
       "return a cosine-similarity matrix. Scores range 0 (unrelated) to 1 (identical meaning). " +
-      "Useful for semantic search, deduplication, and clustering.",
+      "Useful for semantic search, deduplication, and clustering. " +
+      "Pass images (local JPEG or PNG paths) beside or instead of texts to compare images with each other and " +
+      "with texts; that needs a multimodal model ('titan-multimodal' or 'cohere'). At least 2 inputs in total.",
     inputSchema: {
-      texts: z.array(z.string()).min(2).max(50).describe(
-        "List of 2-50 texts to embed and compare pairwise"
+      texts: z.array(z.string()).max(50).optional().describe(
+        "List of up to 50 texts to embed and compare pairwise"
+      ),
+      images: z.array(z.string()).max(50).optional().describe(
+        "Local JPEG or PNG paths (absolute or relative to cwd) to embed beside the texts; rows and columns " +
+        "show the file name"
       ),
       model: z.string().optional().describe(
         "Embedding model alias: 'titan-v2' (default), 'titan-multimodal', 'cohere' (Embed v4), or a full model ID"
@@ -576,27 +753,43 @@ server.registerTool(
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },
-  async ({ texts, model }, { signal }) => {
+  async ({ texts = [], images = [], model }, { signal }) => {
     try {
+      const count = texts.length + images.length;
+      if (count < 2 || count > 50) {
+        throw new Error(`bedrock_embed_similarity needs 2 to 50 inputs across texts and images, got ${count}.`);
+      }
       const entry = getEmbeddingModel(model ?? "titan-v2");
       const modelId = entry?.id ?? model ?? "amazon.titan-embed-text-v2:0";
       const label = entry ? `${entry.name} (${entry.provider})` : modelId;
 
-      const vectors = await embed(modelId, texts, signal);
+      // Texts first, then images, in the order given.
+      const inputs: EmbedInput[] = [...texts.map((text) => ({ text })), ...images.map((imagePath) => ({ imagePath }))];
+      const vectors = await embedInputs(modelId, inputs, signal);
 
-      // Build a markdown similarity matrix with short text labels.
-      const labels = texts.map((t, i) => `${i + 1}. ${t.length > 24 ? t.slice(0, 21) + "..." : t}`);
-      const header = `| | ${texts.map((_, i) => i + 1).join(" | ")} |`;
-      const divider = `| --- |${texts.map(() => " --- |").join("")}`;
+      // Build a markdown similarity matrix with short text labels; image rows and columns carry the file name.
+      const names = images.map((p) => basename(p));
+      const key = (i: number) => (i < texts.length ? `${i + 1}` : `${i + 1} ${names[i - texts.length]}`);
+      const labels = inputs.map((_, i) => {
+        if (i >= texts.length) return `${i + 1}. image: ${names[i - texts.length]}`;
+        const t = texts[i];
+        return `${i + 1}. ${t.length > 24 ? t.slice(0, 21) + "..." : t}`;
+      });
+      const header = `| | ${inputs.map((_, i) => key(i)).join(" | ")} |`;
+      const divider = `| --- |${inputs.map(() => " --- |").join("")}`;
       const rows = vectors.map((v, i) => {
         const cells = vectors.map((w, j) =>
           i === j ? "1.00" : cosineSimilarity(v, w).toFixed(2)
         );
-        return `| **${i + 1}** | ${cells.join(" | ")} |`;
+        return `| **${key(i)}** | ${cells.join(" | ")} |`;
       });
 
+      const counted = [
+        texts.length > 0 || images.length === 0 ? `${texts.length} text${texts.length === 1 ? "" : "s"}` : "",
+        images.length > 0 ? `${images.length} image${images.length === 1 ? "" : "s"}` : "",
+      ].filter(Boolean).join(", ");
       const text =
-        `**${label}** - cosine similarity (${texts.length} texts)\n\n` +
+        `**${label}** - cosine similarity (${counted})\n\n` +
         labels.join("\n") +
         `\n\n${header}\n${divider}\n${rows.join("\n")}`;
 
@@ -606,6 +799,9 @@ server.registerTool(
     }
   }
 );
+
+// MCP prompts: ready-made instructions that call the tools above.
+registerPrompts(server);
 
 // Start the server
 async function main() {

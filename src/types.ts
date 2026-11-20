@@ -37,6 +37,10 @@ export const TextModelSchema = z.object({
   // Which Bedrock API serves the model. "mantle" models (Gemma 4) are only on the
   // OpenAI-compatible bedrock-mantle endpoint; everything else uses Converse.
   api: z.enum(["converse", "mantle"]).optional(),
+  // On-demand USD per 1M input and output tokens, from the AWS Bedrock pricing page.
+  // Absent when AWS does not list the model. An estimate only: no cache, batch or
+  // long-context pricing.
+  price: z.object({ input: z.number().nonnegative(), output: z.number().nonnegative() }).optional(),
 });
 
 export const ImageModelSchema = z.object({

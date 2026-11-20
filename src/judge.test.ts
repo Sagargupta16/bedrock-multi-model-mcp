@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ConverseOptions, ConverseResult } from "./bedrock/converse.js";
+import { estimateCost, formatCost } from "./cost.js";
+import { resolveModelId } from "./models.js";
+import { LEVELS } from "./panel.js";
 import {
   assignLabels,
   buildJudgePrompt,
@@ -167,6 +170,45 @@ test("a failed judge call still returns the candidate answers", async () => {
   );
   assert.match(text, /Judge Claude Opus 5\.5 \(Anthropic\) failed/);
   assert.match(text, /answer from amazon\.nova-pro-v1:0/);
+});
+
+test("level supplies the candidates, models wins over it, and the judge stays the default", async () => {
+  const calls: ConverseOptions[] = [];
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> => {
+    calls.push(o);
+    return fakeResult(o.modelId, o.schema ? '{"scores":{"A":7,"B":6,"C":5},"winner":"A","reasoning":"A."}' : "x");
+  };
+  await runJudge({ level: "cheap", prompt: "q" }, ask, keepOrder);
+  assert.deepEqual(calls.slice(0, 3).map((c) => c.modelId), LEVELS.cheap.map(resolveModelId));
+  assert.equal(calls[3].modelId, "us.anthropic.claude-opus-5-5");
+
+  calls.length = 0;
+  await runJudge({ models: ["kimi", "nova-pro"], level: "intense", prompt: "q" }, ask, keepOrder);
+  assert.deepEqual(calls.slice(0, 2).map((c) => c.modelId), ["us.moonshotai.kimi-k3", "amazon.nova-pro-v1:0"]);
+
+  await assert.rejects(runJudge({ prompt: "q" }, ask, keepOrder), /bedrock_judge needs models, or a level/);
+});
+
+test("the judge report totals the estimated cost of the answers plus the judge call", async () => {
+  const ask = async (o: ConverseOptions): Promise<ConverseResult> =>
+    o.modelId.includes("opus")
+      ? fakeResult(o.modelId, '{"scores":{"A":9,"B":4},"winner":"A","reasoning":"A."}')
+      : fakeResult(o.modelId, "an answer");
+  const text = formatJudgeReport(await runJudge({ models: ["kimi", "nova-pro"], prompt: "q" }, ask, keepOrder));
+  const ids = ["kimi", "nova-pro", "claude-opus"].map(resolveModelId);
+  const cost = formatCost(ids.reduce((n, id) => n + (estimateCost(id, 10, 20) ?? 0), 0));
+  assert.ok(text.includes(`*Est. cost: ${cost} total, answers plus judge*`), text);
+  assert.equal(text.match(/Est\. cost/g)?.length, 1, "the estimate is labeled once");
+
+  // A failed candidate adds nothing and an unpriced one is counted out: Kimi, the custom id and the judge answered.
+  const mixed = async (o: ConverseOptions): Promise<ConverseResult> => {
+    if (o.modelId.includes("nova")) throw new Error("AccessDeniedException");
+    return fakeResult(o.modelId, "some text");
+  };
+  const partial = formatJudgeReport(
+    await runJudge({ models: ["kimi", "nova-pro", "custom.model-v1"], prompt: "q" }, mixed, keepOrder),
+  );
+  assert.match(partial, /\*Est\. cost: ~\$[0-9.]+ \(2 of 3 calls priced\) total, answers plus judge\*/);
 });
 
 test("an unparsable verdict falls back to the raw judge text with the label key", async () => {
