@@ -44,6 +44,7 @@ registry, so swap `llama4` for another model to rerun it.
 | `bedrock_ask` | Send a prompt to any text model. Returns response with token counts and latency. `schema` returns JSON that matches a JSON schema; `effort` sets the thinking depth. |
 | `bedrock_compare` | Same prompt to 2-5 models side by side. Compare quality, speed, and style. Takes `schema` and `effort` too. |
 | `bedrock_judge` | Same prompt to 2-5 models, then a judge model scores the answers blind and picks a winner, optionally merging them into one answer. The verdict comes back as schema-checked JSON when the judge supports it. |
+| `bedrock_panel` | A short discussion between 2-5 models: they answer in turn, each seeing what the earlier ones said, with optional roles (critic, builder, fact-checker and more), 1-3 rounds and a closing summary from a moderator model. Returns the transcript. |
 | `bedrock_list_models` | List available text models with aliases, use cases, and capabilities. |
 | `bedrock_generate_image` | Generate images from text (Stable Image Ultra, SD3.5 Large, Stable Image Core). Saves PNG locally. |
 | `bedrock_edit_image` | Edit or transform a local image with the 13 Stability AI Image Services: inpaint, outpaint, erase, remove the background, find and replace or recolor an object, three upscalers, sketch and structure control, style guide and style transfer. Saves PNG locally. |
@@ -355,6 +356,29 @@ answer. A candidate that fails is listed under **Failed** and the rest are still
 judged; if the judge call fails, the answers still come back. Billing is one
 generation per candidate plus one for the judge.
 
+### Run a panel discussion
+
+```
+"Use bedrock_panel with nova-pro, kimi and deepseek, roles builder, critic and fact-checker, 2 rounds, summarize with claude-haiku: Should a small team move its cron jobs to Step Functions?"
+```
+
+The models speak one after another in the order given, so each one sees what the
+earlier ones said; in round 2 and 3 each answers again having read everything so far.
+A model's view is a single user message with the question and the turns so far, each
+prefixed with the speaker's name in square brackets and its own turns marked `(you)`.
+What one model said reaches the next only as that quoted text, never in a system
+prompt, where it would carry more weight. `roles` takes one entry per model: a preset
+(`critic`, `builder`, `fact-checker`, `devils-advocate`, `simplifier`, `moderator`),
+free text up to 200 characters, or `null`. `summarize` names a model that closes with a
+short summary of where the panel agrees and disagrees; it is told it is the moderator
+and is not on the panel unless it is also in `models`. Without `models`, `level` picks
+a panel of three: `cheap` (Nova Micro, Ministral 3 14B, Qwen3 Next 80B A3B), `medium`
+(Claude Haiku 5.5, GPT-6 Luna, Mistral Large 3) or `intense` (Claude Fable 5.2, GPT-6
+Astra, Grok 4.7). The same model may take two seats only in different roles. A model
+that fails loses its turn, the next one carries on, and the failure is not mentioned to
+it. Turns run sequentially and each is billed: models x rounds generations, plus one for
+the summary.
+
 ### Generate an image
 
 ```
@@ -402,6 +426,7 @@ was already sent could leave a billed job running with no ARN to track it.
 src/
   index.ts          # MCP server - tool registration, stdio transport
   judge.ts          # bedrock_judge - blind labels, judge prompt, verdict parsing
+  panel.ts          # bedrock_panel - roles, each model's view of the discussion, rounds, summary
   models.ts         # Loads + validates registry data, resolves aliases
   types.ts          # Zod schemas for model data validation
   bedrock/

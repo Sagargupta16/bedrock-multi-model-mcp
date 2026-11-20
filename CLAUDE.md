@@ -38,13 +38,13 @@ npm run test     # builds, then node --test dist/**/*.test.js
 npm run lint     # tsc --noEmit
 ```
 
-- Suites: `src/models.test.ts` (registries, measured `effort` / `structured_output` flags, server.json/package.json sync), `src/judge.test.ts` (bedrock_judge with an injected fake converse), `src/bedrock/converse.test.ts` (request building: outputConfig, option rejection, JSON reply parsing). Tests run against compiled `dist/`, so build first (`npm run test` handles it). `tsc` never deletes outputs, so after removing a source file run `npm run clean` or a stale `dist/*.test.js` keeps running.
+- Suites: `src/models.test.ts` (registries, measured `effort` / `structured_output` flags, server.json/package.json sync), `src/judge.test.ts` (bedrock_judge with an injected fake converse), `src/panel.test.ts` (bedrock_panel: role and seat resolution, each model's view, failed turns, with an injected fake converse), `src/bedrock/converse.test.ts` (request building: outputConfig, option rejection, JSON reply parsing). Tests run against compiled `dist/`, so build first (`npm run test` handles it). `tsc` never deletes outputs, so after removing a source file run `npm run clean` or a stale `dist/*.test.js` keeps running.
 - `npm run benchmark` makes live, billed Bedrock calls; `node scripts/benchmark.mjs --from docs/benchmark/results.json` only re-renders the table.
 - `npm run lifecycle` checks every registry id against AWS's public Legacy/EOL page (no credentials, no billing).
 
 ## Entry points
 
-- `src/index.ts` -- MCP server: tool registration (bedrock_ask, bedrock_compare, bedrock_judge, bedrock_list_models, bedrock_generate_image, bedrock_edit_image, bedrock_generate_video, bedrock_video_status, bedrock_embed_similarity), stdio transport.
+- `src/index.ts` -- MCP server: tool registration (bedrock_ask, bedrock_compare, bedrock_judge, bedrock_panel, bedrock_list_models, bedrock_generate_image, bedrock_edit_image, bedrock_generate_video, bedrock_video_status, bedrock_embed_similarity), stdio transport.
 - `scripts/call-tool.mjs` -- stdio MCP client for smoke tests; `scripts/benchmark.mjs` -- latency benchmark that also rewrites the README block between `<!-- benchmark:start -->` and `<!-- benchmark:end -->` (do not hand-edit that block).
 
 ## Key files
@@ -55,6 +55,7 @@ npm run lint     # tsc --noEmit
 - `src/bedrock/client.ts` -- shared region/auth config, one cached SDK client per region, and the empty-bearer-token guard.
 - `scripts/check-lifecycle.mjs` + `.github/workflows/lifecycle.yml` -- weekly (and on registry PRs) check that no registry model is Legacy or EOL on AWS.
 - `src/judge.ts` -- bedrock_judge: shuffled blind labels, judge prompt, verdict parsing, report formatting.
+- `src/panel.ts` -- bedrock_panel: role presets, the three `level` panels (aliases, checked against the registry by `panel.test.ts`), each model's single-message view of the discussion, sequential rounds, optional moderator summary. `converse()` takes one prompt string, so own turns are marked `(you)` inside the user message instead of being assistant turns.
 - `server.json` + `.github/workflows/release.yml` -- MCP Registry metadata and the tag-triggered npm + registry publish (OIDC, no stored tokens). The npm step skips a version npm already has, and a read-only step waits until npm serves the version before `mcp-publisher publish` (the registry rejected v0.7.1 two seconds after npm publish).
 - `src/bedrock/{converse,image,edit,video,embed}.ts` -- per-modality API wrappers (Converse / InvokeModel / StartAsyncInvoke). `image.ts` exports `firstImage` and `saveImage`, shared with `edit.ts`.
 - `src/bedrock/mantle.ts` -- bedrock-mantle Chat Completions for text entries with `"api": "mantle"` (Gemma 4); `converse()` dispatches to it after `buildConverseInput`.
@@ -87,6 +88,7 @@ npm run lint     # tsc --noEmit
 - `bedrock_ask` -- prompt one text model (alias or full model ID); `schema` for JSON output, `effort` for thinking depth (Claude, GPT-6 and 6.1, Grok 4.7, Kimi K3, Gemma 4).
 - `bedrock_compare` -- same prompt to 2-5 models side by side; takes `schema` and `effort`.
 - `bedrock_judge` -- 2-5 models answer, a judge model (default claude-opus, Opus 5.5) scores them blind and picks a winner; the verdict uses structured output when the judge supports it.
+- `bedrock_panel` -- 2-5 models discuss one prompt in turn, each seeing the earlier turns; optional `roles`, `rounds` (1-3), `summarize` (moderator model) and `level` (`cheap` / `medium` / `intense` default panels of three).
 - `bedrock_generate_image` / `bedrock_generate_video` + `bedrock_video_status` -- media generation.
 - `bedrock_edit_image` -- one of 13 Stability image services on a local image (`operation`, `image_path`); the edit services are only on the `us.stability.*` profile.
 - `bedrock_embed_similarity` -- cosine-similarity matrix across 2+ texts.

@@ -11,6 +11,7 @@ import { startVideoGeneration, getVideoStatus } from "./bedrock/video.js";
 import { embed, cosineSimilarity, getEmbeddingModel } from "./bedrock/embed.js";
 import { TEXT_MODELS, resolveModelId, getModelInfo } from "./models.js";
 import { runJudge, formatJudgeReport } from "./judge.js";
+import { runPanel, formatPanelReport, levelHelp, LEVEL_IDS, MAX_ROLE_LENGTH } from "./panel.js";
 import { EFFORT_LEVELS } from "./types.js";
 
 // Read the version from package.json (one directory above the compiled
@@ -28,8 +29,8 @@ const server = new McpServer({
 const effortParam = z.enum(EFFORT_LEVELS).optional().describe(
   "Thinking depth and token spend for models that take it (Claude except Haiku 4.5, GPT-6 and 6.1, Grok 4.7, " +
   "Kimi K3, Gemma 4 up to xhigh): low, medium, high, xhigh, max. Claude Opus 5.5 and Haiku 5.5 default to " +
-  "medium. bedrock_ask rejects it for other models; bedrock_compare and bedrock_judge apply it only to the " +
-  "models that take it."
+  "medium. bedrock_ask rejects it for other models; bedrock_compare, bedrock_judge and bedrock_panel apply it " +
+  "only to the models that take it."
 );
 const schemaParam = z.record(z.string(), z.unknown()).optional().describe(
   "JSON schema the reply must match (structured output). Object schemas need additionalProperties: false. " +
@@ -208,6 +209,66 @@ server.registerTool(
         signal,
       });
       return { content: [{ type: "text" as const, text: formatJudgeReport(report) }] };
+    } catch (err) {
+      return errorResult(err);
+    }
+  }
+);
+
+// --- Tool: bedrock_panel ---
+// 2-5 models discuss one prompt in turn, each seeing what the earlier ones said.
+server.registerTool(
+  "bedrock_panel",
+  {
+    description:
+      "Run a short discussion between 2-5 Bedrock models and return the transcript. Unlike bedrock_compare, " +
+      "the models answer in turn and each one sees what the earlier ones said, so they can agree, push back " +
+      "and build on each other. Give each model a role (critic, builder, fact-checker, devils-advocate, " +
+      "simplifier, moderator, or your own words), run 1-3 rounds, and set summarize to a model that closes " +
+      "with where the panel agrees and disagrees. Pass level instead of models for a default panel of " +
+      `three: ${levelHelp()}. Turns run one after another and each is billed: models x rounds generations, ` +
+      "plus one for the summary. A model that fails loses its turn and the panel carries on.",
+    inputSchema: {
+      prompt: z.string().describe("The question or task the panel discusses"),
+      models: z.array(z.string()).optional().describe(
+        "2-5 model aliases or IDs, in speaking order (e.g. ['nova-pro', 'kimi', 'deepseek']). Required unless " +
+        "level is given. A model may be listed twice only with different roles."
+      ),
+      roles: z.array(z.string().max(MAX_ROLE_LENGTH).nullable()).optional().describe(
+        "One entry per model, in the same order: a preset (critic, builder, fact-checker, devils-advocate, " +
+        "simplifier, moderator), free text up to 200 characters, or null for no role"
+      ),
+      rounds: z.number().int().min(1).max(3).optional().describe(
+        "Rounds of discussion, 1-3 (default 1). In round 2 and 3 each model answers again having seen everything so far."
+      ),
+      summarize: z.string().optional().describe(
+        "Model alias or ID that closes with a short summary of where the panel agrees and disagrees. It is " +
+        "told it is the moderator and is not a panelist unless it is also in models."
+      ),
+      level: z.enum(LEVEL_IDS).optional().describe(
+        `Default panel when models is absent: ${levelHelp()}. Ignored when models is given.`
+      ),
+      max_tokens: maxTokensParam.describe("Maximum tokens per turn"),
+      effort: effortParam,
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+  async ({ prompt, models, roles, rounds, summarize, level, max_tokens, effort }, { signal }) => {
+    try {
+      const report = await runPanel({
+        prompt,
+        models,
+        roles,
+        rounds,
+        summarize,
+        level,
+        maxTokens: max_tokens,
+        effort,
+        signal,
+      });
+      // Like bedrock_compare: lost turns are part of a panel, only an all-failed one is an error.
+      const allFailed = report.turns.every((t) => t.error);
+      return { content: [{ type: "text" as const, text: formatPanelReport(report) }], isError: allFailed };
     } catch (err) {
       return errorResult(err);
     }

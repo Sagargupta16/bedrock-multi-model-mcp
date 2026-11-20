@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-11-20
+
+### Added
+
+- `bedrock_panel` tool: 2-5 models discuss one prompt in turn and the tool returns the transcript. Unlike `bedrock_compare` and `bedrock_judge`, the models answer one after another and each sees what the earlier ones said.
+  - `roles` gives each model one of six presets (`critic`, `builder`, `fact-checker`, `devils-advocate`, `simplifier`, `moderator`), free text up to 200 characters, or `null`. Every model is told who else is on the panel and in which role.
+  - `rounds` (1 to 3, default 1) lets each model answer again having seen everything so far; `summarize` names a model that closes with where the panel agrees and disagrees; `level` (`cheap`, `medium` or `intense`) picks a default panel of three when `models` is absent.
+  - A model's view is one user message holding the question and the turns so far, each prefixed with the speaker's name in square brackets, its own turns marked `(you)`. What a model said never reaches another model's system prompt.
+  - A model that fails loses its turn and the panel carries on, as in `bedrock_compare`. The same model may be listed twice only with different roles. `max_tokens` and `effort` work as in `bedrock_compare`.
+  - The idea comes from the group-chat round in confab; no code or dependency was taken from it.
+
 ## [0.8.1] - 2026-11-15
 
 ### Fixed
