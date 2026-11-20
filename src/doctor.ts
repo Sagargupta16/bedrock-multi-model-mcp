@@ -154,7 +154,7 @@ export async function runDoctor(options: DoctorOptions = {}, ask: AskFn = conver
 }
 
 function cell(text: string): string {
-  return text.replace(/\|/g, "\\|");
+  return text.replace(/[\\|]/g, "\\$&");
 }
 
 export function formatDoctorReport(report: DoctorReport): string {

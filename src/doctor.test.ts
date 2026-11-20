@@ -153,3 +153,12 @@ test("formatDoctorReport renders a table and a totals line", () => {
   assert.match(text, /\| c \| m\.c \| denied \| 40 \| a\\\|b \|/);
   assert.ok(text.endsWith("1 ok, 1 throttled, 1 denied of 3 models in 12.4s"));
 });
+
+test("formatDoctorReport escapes backslashes as well as pipes in a note", () => {
+  const report: DoctorReport = {
+    rows: [{ alias: "a", modelId: "m.a", name: "A", status: "error", latencyMs: 5, note: "C:\\tmp\\x | y" }],
+    counts: { ok: 0, throttled: 0, denied: 0, invalid: 0, error: 1 },
+    totalMs: 5,
+  };
+  assert.ok(formatDoctorReport(report).includes("| C:\\\\tmp\\\\x \\| y |"));
+});
