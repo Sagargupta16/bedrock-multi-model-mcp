@@ -77,6 +77,25 @@ Before a new model ID lands:
    weekly and on every PR that touches `src/data/`. `src/models.test.ts` bans the IDs
    already retired.
 
+7. **Set its price.** A text model gets a `price` (`input` and `output`, USD per 1M tokens)
+   from the AWS Price List bulk files for us-east-1 (the `AmazonBedrockFoundationModels`
+   and `AmazonBedrock` offers): on-demand, standard tier. For an id with the `us.`
+   profile prefix use the non-global price. Leave `price` out when AWS lists none; the
+   model then shows no cost. `bedrock_list_models` and the cost lines read it.
+8. **Keep the skip list in step.** `scripts/model-skips.json` holds the Bedrock model
+   cards that are deliberately not in the catalog, each with a `reason`. When you decide
+   not to add a card (gated access, throttled on every probe, superseded), add it there
+   with the reason, so the weekly check stops reporting it; when you add the model to the
+   registry, it no longer needs an entry.
+
+To see what is new on AWS's side, run `npm run new-models`. It needs no credentials and
+bills nothing: it reads AWS's public model card pages and prints one line per card that is
+neither in `src/data/` nor in `scripts/model-skips.json`, then a count. `--json` prints the
+same as JSON, and exit code 2 means the card index (or over 10 percent of the cards) could
+not be fetched, so a network problem never reads as "nothing new". A `new-models` job in
+`.github/workflows/lifecycle.yml` runs it weekly and on manual runs, and opens or updates
+one issue with the result.
+
 Update the model table in `README.md` in the same change so the docs and the registry
 cannot drift apart.
 
@@ -118,6 +137,11 @@ One-time setup, done by the maintainer:
 3. Tag and push: `git tag v<version>`, then `git push origin v<version>`.
 
 Validate `server.json` locally with `mcp-publisher validate server.json` before tagging.
+
+After the publish job succeeds, a `bundle` job builds the one-click `.mcpb` bundle
+(`npm run pack:mcpb` does the same locally) and attaches it to the GitHub release. The
+version in `mcpb/manifest.json` is `0.0.0` on purpose: the pack script stamps the version
+from `package.json`, so there is nothing to bump there.
 
 ## Reporting a security issue
 

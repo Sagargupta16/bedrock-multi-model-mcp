@@ -1,0 +1,776 @@
+{
+  "note": "Bedrock model cards deliberately not in the catalog; scripts/check-new-models.mjs ignores them. A card is matched by slug, then ids, then name.",
+  "skips": [
+    {
+      "card": "model-card-ai21-labs-jamba-1-5-large",
+      "name": "Jamba 1.5 Large",
+      "ids": [
+        "ai21.jamba-1-5-large-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-ai21-labs-jamba-1-5-mini",
+      "name": "Jamba 1.5 Mini",
+      "ids": [
+        "ai21.jamba-1-5-mini-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-amazon-amazon-nova-multimodal-embeddings",
+      "name": "Amazon Nova Multimodal Embeddings",
+      "ids": [
+        "amazon.nova-2-multimodal-embeddings-v1:0"
+      ],
+      "reason": "async invocation only"
+    },
+    {
+      "card": "model-card-amazon-nova-2-5-sonic",
+      "name": "Nova 2.5 Sonic",
+      "ids": [
+        "amazon.nova-2-5-sonic"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-amazon-nova-2-sonic",
+      "name": "Nova 2 Sonic",
+      "ids": [
+        "amazon.nova-2-sonic-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-amazon-nova-canvas",
+      "name": "Nova Canvas",
+      "ids": [
+        "amazon.nova-canvas-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-amazon-nova-reel",
+      "name": "Nova Reel",
+      "ids": [
+        "amazon.nova-reel-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-amazon-titan-embeddings-g1---text",
+      "name": "Titan Embeddings G1 - Text",
+      "ids": [
+        "amazon.titan-embed-text-v1"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-amazon-titan-text-embeddings-v2-2",
+      "name": "Titan Embeddings G1 - Text v2",
+      "ids": [
+        "amazon.titan-embed-g1-text-02"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-3-haiku",
+      "name": "Claude 3 Haiku",
+      "ids": [
+        "anthropic.claude-3-haiku-20240307-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-fable-5",
+      "name": "Claude Fable 5",
+      "ids": [
+        "anthropic.claude-fable-5",
+        "us.anthropic.claude-fable-5",
+        "global.anthropic.claude-fable-5"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-mythos-5",
+      "name": "Claude Mythos 5",
+      "ids": [
+        "anthropic.claude-mythos-5"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-mythos-5-1",
+      "name": "Claude Mythos 5.1",
+      "ids": [
+        "anthropic.claude-mythos-5-1",
+        "us.anthropic.claude-mythos-5-1",
+        "global.anthropic.claude-mythos-5-1"
+      ],
+      "reason": "gated; not invocable on the test account"
+    },
+    {
+      "card": "model-card-anthropic-claude-mythos-5-2",
+      "name": "Claude Mythos 5.2",
+      "ids": [
+        "anthropic.claude-mythos-5-2",
+        "us.anthropic.claude-mythos-5-2",
+        "global.anthropic.claude-mythos-5-2"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-opus-4-1",
+      "name": "Claude Opus 4.1",
+      "ids": [
+        "anthropic.claude-opus-4-1-20250805-v1:0",
+        "us.anthropic.claude-opus-4-1-20250805-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-opus-4-5",
+      "name": "Claude Opus 4.5",
+      "ids": [
+        "anthropic.claude-opus-4-5-20251101-v1:0",
+        "global.anthropic.claude-opus-4-5-20251101-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-opus-4-7",
+      "name": "Claude Opus 4.7",
+      "ids": [
+        "anthropic.claude-opus-4-7",
+        "global.anthropic.claude-opus-4-7"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-opus-4-8",
+      "name": "Claude Opus 4.8",
+      "ids": [
+        "anthropic.claude-opus-4-8",
+        "global.anthropic.claude-opus-4-8"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-sonnet-4",
+      "name": "Claude Sonnet 4",
+      "ids": [
+        "anthropic.claude-sonnet-4-20250514-v1:0",
+        "global.anthropic.claude-sonnet-4-20250514-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-anthropic-claude-sonnet-4-5",
+      "name": "Claude Sonnet 4.5",
+      "ids": [
+        "anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "global.anthropic.claude-sonnet-4-5-20250929-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-cohere-command-r",
+      "name": "Command R",
+      "ids": [
+        "cohere.command-r-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-cohere-command-r-plus",
+      "name": "Command R\\+",
+      "ids": [
+        "cohere.command-r-plus-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-cohere-embed-english",
+      "name": "Embed English",
+      "ids": [
+        "cohere.embed-english-v3"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-cohere-embed-multilingual",
+      "name": "Embed Multilingual",
+      "ids": [
+        "cohere.embed-multilingual-v3"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-cohere-rerank-3-5",
+      "name": "Rerank 3.5",
+      "ids": [
+        "cohere.rerank-v3-5:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-deepseek-deepseek-r1",
+      "name": "DeepSeek-R1",
+      "ids": [
+        "deepseek.r1-v1:0",
+        "us.deepseek.r1-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-deepseek-deepseek-v3-1",
+      "name": "DeepSeek-V3.1",
+      "ids": [
+        "deepseek.v3-v1:0",
+        "deepseek.v3.1"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-google-gemma-3-12b-it",
+      "name": "Gemma 3 12B IT",
+      "ids": [
+        "google.gemma-3-12b-it"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-google-gemma-3-27b-pt",
+      "name": "Gemma 3 27B PT",
+      "ids": [
+        "google.gemma-3-27b-it"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-google-gemma-3-4b-it",
+      "name": "Gemma 3 4B IT",
+      "ids": [
+        "google.gemma-3-4b-it"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-1-405b-instruct",
+      "name": "Llama 3.1 405B Instruct",
+      "ids": [
+        "meta.llama3-1-405b-instruct-v1:0",
+        "us.meta.llama3-1-405b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-1-70b-instruct",
+      "name": "Llama 3.1 70B Instruct",
+      "ids": [
+        "meta.llama3-1-70b-instruct-v1:0",
+        "us.meta.llama3-1-70b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-1-8b-instruct",
+      "name": "Llama 3.1 8B Instruct",
+      "ids": [
+        "meta.llama3-1-8b-instruct-v1:0",
+        "us.meta.llama3-1-8b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-2-11b-instruct",
+      "name": "Llama 3.2 11B Instruct",
+      "ids": [
+        "meta.llama3-2-11b-instruct-v1:0",
+        "us.meta.llama3-2-11b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-2-1b-instruct",
+      "name": "Llama 3.2 1B Instruct",
+      "ids": [
+        "meta.llama3-2-1b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-2-3b-instruct",
+      "name": "Llama 3.2 3B Instruct",
+      "ids": [
+        "meta.llama3-2-3b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-2-90b-instruct",
+      "name": "Llama 3.2 90B Instruct",
+      "ids": [
+        "meta.llama3-2-90b-instruct-v1:0",
+        "us.meta.llama3-2-90b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-3-70b-instruct",
+      "name": "Llama 3.3 70B Instruct",
+      "ids": [
+        "meta.llama3-3-70b-instruct-v1:0",
+        "us.meta.llama3-3-70b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-70b-instruct",
+      "name": "Llama 3 70B Instruct",
+      "ids": [
+        "meta.llama3-70b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-3-8b-instruct",
+      "name": "Llama 3 8B Instruct",
+      "ids": [
+        "meta.llama3-8b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-4-maverick-17b-instruct",
+      "name": "Llama 4 Maverick 17B Instruct",
+      "ids": [
+        "meta.llama4-maverick-17b-instruct-v1:0",
+        "us.meta.llama4-maverick-17b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-meta-llama-4-scout-17b-instruct",
+      "name": "Llama 4 Scout 17B Instruct",
+      "ids": [
+        "meta.llama4-scout-17b-instruct-v1:0",
+        "us.meta.llama4-scout-17b-instruct-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-minimax-minimax-m2",
+      "name": "MiniMax M2",
+      "ids": [
+        "minimax.minimax-m2"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-minimax-minimax-m2-1",
+      "name": "MiniMax M2.1",
+      "ids": [
+        "minimax.minimax-m2.1"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-devstral-2-123b",
+      "name": "Devstral 2 123B",
+      "ids": [
+        "mistral.devstral-2-123b"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-ministral-3-8b",
+      "name": "Ministral 3 8B",
+      "ids": [
+        "mistral.ministral-3-8b-instruct"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-ministral-3b",
+      "name": "Ministral 3B",
+      "ids": [
+        "mistral.ministral-3-3b-instruct"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-mistral-7b-instruct",
+      "name": "Mistral 7B Instruct",
+      "ids": [
+        "mistral.mistral-7b-instruct-v0:2"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-mistral-large",
+      "name": "Mistral Large",
+      "ids": [
+        "mistral.mistral-large-2402-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-mistral-small",
+      "name": "Mistral Small",
+      "ids": [
+        "mistral.mistral-small-2402-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-mixtral-8x7b-instruct",
+      "name": "Mixtral 8x7B Instruct",
+      "ids": [
+        "mistral.mixtral-8x7b-instruct-v0:1"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-voxtral-mini-3b-2507",
+      "name": "Voxtral Mini 3B 2507",
+      "ids": [
+        "mistral.voxtral-mini-3b-2507"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-mistral-ai-voxtral-small-24b-2507",
+      "name": "Voxtral Small 24B 2507",
+      "ids": [
+        "mistral.voxtral-small-24b-2507"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-moonshot-ai-kimi-k2-5",
+      "name": "Kimi K2.5",
+      "ids": [
+        "moonshotai.kimi-k2.5"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-moonshot-ai-kimi-k2-thinking",
+      "name": "Kimi K2 Thinking",
+      "ids": [
+        "moonshot.kimi-k2-thinking",
+        "moonshotai.kimi-k2-thinking"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-moonshot-ai-kimi-k3-1-highspeed",
+      "name": "Kimi K3.1 Pro - Highspeed",
+      "ids": [
+        "moonshotai.kimi-k3.1",
+        "us.moonshotai.kimi-k3.1",
+        "in.moonshotai.kimi-k3.1",
+        "global.moonshotai.kimi-k3.1"
+      ],
+      "reason": "throttled on the test account 2026-11-10 and 2026-11-20; re-probe before adding"
+    },
+    {
+      "card": "model-card-nvidia-nemotron-nano-3-30b",
+      "name": "Nemotron Nano 3 30B",
+      "ids": [
+        "nvidia.nemotron-nano-3-30b",
+        "us-gov.nvidia.nemotron-nano-3-30b"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-nvidia-nvidia-nemotron-nano-12b-v2-vl-bf16",
+      "name": "NVIDIA Nemotron Nano 12B v2 VL BF16",
+      "ids": [
+        "nvidia.nemotron-nano-12b-v2",
+        "us-gov.nvidia.nemotron-nano-12b-v2"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-nvidia-nvidia-nemotron-nano-9b-v2",
+      "name": "NVIDIA Nemotron Nano 9B v2",
+      "ids": [
+        "nvidia.nemotron-nano-9b-v2",
+        "us-gov.nvidia.nemotron-nano-9b-v2"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-54",
+      "name": "GPT-5.4",
+      "ids": [
+        "openai.gpt-5.4",
+        "us.openai.gpt-5.4",
+        "us-gov.openai.gpt-5.4",
+        "global.openai.gpt-5.4"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-55",
+      "name": "GPT-5.5",
+      "ids": [
+        "openai.gpt-5.5",
+        "us.openai.gpt-5.5",
+        "global.openai.gpt-5.5"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-56-cyber",
+      "name": "Daybreak Red: GPT-5.6 Cyber",
+      "ids": [
+        "openai.gpt-5.6-cyber",
+        "us.openai.gpt-5.6-cyber",
+        "global.openai.gpt-5.6-cyber"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-56-luna",
+      "name": "GPT-5.6 Luna",
+      "ids": [
+        "openai.gpt-5.6-luna",
+        "us.openai.gpt-5.6-luna",
+        "in.openai.gpt-5.6-luna",
+        "us-gov.openai.gpt-5.6-luna",
+        "global.openai.gpt-5.6-luna"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-56-sol",
+      "name": "GPT-5.6 Sol",
+      "ids": [
+        "openai.gpt-5.6-sol",
+        "us.openai.gpt-5.6-sol",
+        "global.openai.gpt-5.6-sol"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-56-terra",
+      "name": "GPT-5.6 Terra",
+      "ids": [
+        "openai.gpt-5.6-terra",
+        "us.openai.gpt-5.6-terra",
+        "in.openai.gpt-5.6-terra",
+        "us-gov.openai.gpt-5.6-terra",
+        "global.openai.gpt-5.6-terra"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-6-1-sol",
+      "name": "GPT-6.1 Sol",
+      "ids": [
+        "openai.gpt-6.1-sol",
+        "us.openai.gpt-6.1-sol",
+        "global.openai.gpt-6.1-sol"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-6-astra",
+      "name": "GPT-6 Astra",
+      "ids": [
+        "openai.gpt-6-astra",
+        "us.openai.gpt-6-astra",
+        "global.openai.gpt-6-astra"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-6-sol",
+      "name": "GPT-6 Sol",
+      "ids": [
+        "openai.gpt-6-sol",
+        "us.openai.gpt-6-sol",
+        "global.openai.gpt-6-sol"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-daybreak-blue-56-sol",
+      "name": "Daybreak Blue: GPT-5.6 Sol",
+      "ids": [
+        "openai.gpt-daybreak-blue-5.6-sol",
+        "us.openai.gpt-daybreak-blue-5.6-sol",
+        "global.openai.gpt-daybreak-blue-5.6-sol"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-oss-safeguard-120b",
+      "name": "GPT OSS Safeguard 120B",
+      "ids": [
+        "openai.gpt-oss-safeguard-120b"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-openai-gpt-oss-safeguard-20b",
+      "name": "GPT OSS Safeguard 20B",
+      "ids": [
+        "openai.gpt-oss-safeguard-20b"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-qwen-qwen3-235b-a22b-2507",
+      "name": "Qwen3 235B A22B 2507",
+      "ids": [
+        "qwen.qwen3-235b-a22b-2507-v1:0",
+        "qwen.qwen3-235b-a22b-2507"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-qwen-qwen3-32b",
+      "name": "Qwen3 32B",
+      "ids": [
+        "qwen.qwen3-32b-v1:0",
+        "qwen.qwen3-32b"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-qwen-qwen3-coder-30b-a3b-instruct",
+      "name": "Qwen3-Coder-30B-A3B-Instruct",
+      "ids": [
+        "qwen.qwen3-coder-30b-a3b-v1:0",
+        "qwen.qwen3-coder-30b-a3b-instruct"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-qwen-qwen3-coder-480b-a35b-instruct",
+      "name": "Qwen3 Coder 480B A35B Instruct",
+      "ids": [
+        "qwen.qwen3-coder-480b-a35b-v1:0",
+        "qwen.qwen3-coder-480b-a35b-instruct"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-twelvelabs-marengo-embed-3-0",
+      "name": "Marengo Embed 3.0",
+      "ids": [
+        "twelvelabs.marengo-embed-3-0-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-twelvelabs-marengo-embed-v2-7",
+      "name": "Marengo Embed v2.7",
+      "ids": [
+        "twelvelabs.marengo-embed-2-7-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-twelvelabs-pegasus-v1-2",
+      "name": "Pegasus v1.2",
+      "ids": [
+        "twelvelabs.pegasus-1-2-v1:0",
+        "global.twelvelabs.pegasus-1-2-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-twelvelabs-pegasus-v1-5",
+      "name": "Pegasus v1.5",
+      "ids": [
+        "twelvelabs.pegasus-1-5-v1:0",
+        "us.twelvelabs.pegasus-1-5-v1:0",
+        "global.twelvelabs.pegasus-1-5-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-writer-palmyra-vision-7b",
+      "name": "Palmyra Vision 7B",
+      "ids": [
+        "writer.palmyra-vision-7b"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-writer-palmyra-x4",
+      "name": "Palmyra X4",
+      "ids": [
+        "writer.palmyra-x4-v1:0",
+        "us.writer.palmyra-x4-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-writer-palmyra-x5",
+      "name": "Palmyra X5",
+      "ids": [
+        "writer.palmyra-x5-v1:0",
+        "us.writer.palmyra-x5-v1:0"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-xai-grok-4-3",
+      "name": "Grok 4.3",
+      "ids": [
+        "xai.grok-4.3"
+      ],
+      "reason": "superseded by Grok 4.7"
+    },
+    {
+      "card": "model-card-xai-grok-4-6",
+      "name": "Grok 4.6",
+      "ids": [
+        "xai.grok-4.6",
+        "us.xai.grok-4.6",
+        "global.xai.grok-4.6"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-zai-glm-4-7",
+      "name": "GLM 4.7",
+      "ids": [
+        "zai.glm-4.7"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-zai-glm-4-7-flash",
+      "name": "GLM 4.7 Flash",
+      "ids": [
+        "zai.glm-4.7-flash"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-zai-glm-5",
+      "name": "GLM 5",
+      "ids": [
+        "zai.glm-5"
+      ],
+      "reason": "baseline 2026-11-20: not in the catalog when the watcher was added"
+    },
+    {
+      "card": "model-card-zai-glm-5-3",
+      "name": "GLM 5.3",
+      "ids": [
+        "zai.glm-5.3",
+        "us.zai.glm-5.3",
+        "global.zai.glm-5.3"
+      ],
+      "reason": "eligible customers only; every call throttled on the test account"
+    }
+  ]
+}

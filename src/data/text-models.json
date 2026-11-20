@@ -20,7 +20,11 @@
     ],
     "maxTokens": 64000,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 8.8,
+      "output": 44
+    }
   },
   {
     "id": "us.anthropic.claude-fable-5-1",
@@ -41,7 +45,11 @@
     ],
     "maxTokens": 64000,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 11,
+      "output": 55
+    }
   },
   {
     "id": "us.anthropic.claude-opus-5-5",
@@ -63,7 +71,11 @@
     ],
     "maxTokens": 32768,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 4.4,
+      "output": 22
+    }
   },
   {
     "id": "us.anthropic.claude-opus-5",
@@ -84,7 +96,11 @@
     ],
     "maxTokens": 32768,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 5.5,
+      "output": 27.5
+    }
   },
   {
     "id": "us.anthropic.claude-opus-4-6-v1",
@@ -102,7 +118,11 @@
       "structured_output"
     ],
     "maxTokens": 32768,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 5.5,
+      "output": 27.5
+    }
   },
   {
     "id": "us.anthropic.claude-sonnet-5-5",
@@ -124,7 +144,11 @@
     ],
     "maxTokens": 32768,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 2.2,
+      "output": 11
+    }
   },
   {
     "id": "us.anthropic.claude-sonnet-5",
@@ -144,7 +168,11 @@
     ],
     "maxTokens": 32768,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 2.2,
+      "output": 11
+    }
   },
   {
     "id": "us.anthropic.claude-sonnet-4-6",
@@ -162,7 +190,11 @@
       "structured_output"
     ],
     "maxTokens": 16384,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 3.3,
+      "output": 16.5
+    }
   },
   {
     "id": "us.anthropic.claude-haiku-5-5",
@@ -184,7 +216,11 @@
     ],
     "maxTokens": 32768,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 0.11,
+      "output": 0.55
+    }
   },
   {
     "id": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -201,7 +237,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 1.1,
+      "output": 5.5
+    }
   },
   {
     "id": "mistral.mistral-large-3-675b-instruct",
@@ -218,7 +258,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.5,
+      "output": 1.5
+    }
   },
   {
     "id": "us.mistral.pixtral-large-2502-v1:0",
@@ -233,7 +277,11 @@
       "vision",
       "streaming"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 2,
+      "output": 6
+    }
   },
   {
     "id": "mistral.ministral-3-14b-instruct",
@@ -251,7 +299,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.2,
+      "output": 0.2
+    }
   },
   {
     "id": "mistral.magistral-small-2509",
@@ -269,7 +321,11 @@
       "streaming",
       "reasoning"
     ],
-    "maxTokens": 16384
+    "maxTokens": 16384,
+    "price": {
+      "input": 0.5,
+      "output": 1.5
+    }
   },
   {
     "id": "qwen.qwen3-coder-next",
@@ -286,7 +342,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.5,
+      "output": 1.2
+    }
   },
   {
     "id": "qwen.qwen3-vl-235b-a22b",
@@ -302,7 +362,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.53,
+      "output": 2.66
+    }
   },
   {
     "id": "qwen.qwen3-next-80b-a3b",
@@ -319,7 +383,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.14,
+      "output": 1.2
+    }
   },
   {
     "id": "deepseek.v3.2",
@@ -335,7 +403,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.62,
+      "output": 1.85
+    }
   },
   {
     "id": "google.gemma-4-31b",
@@ -356,7 +428,11 @@
     ],
     "maxTokens": 8192,
     "effort": true,
-    "api": "mantle"
+    "api": "mantle",
+    "price": {
+      "input": 0.14,
+      "output": 0.4
+    }
   },
   {
     "id": "google.gemma-4-26b-a4b",
@@ -375,7 +451,11 @@
     ],
     "maxTokens": 8192,
     "effort": true,
-    "api": "mantle"
+    "api": "mantle",
+    "price": {
+      "input": 0.13,
+      "output": 0.4
+    }
   },
   {
     "id": "google.gemma-4-e2b",
@@ -394,7 +474,11 @@
     ],
     "maxTokens": 8192,
     "effort": true,
-    "api": "mantle"
+    "api": "mantle",
+    "price": {
+      "input": 0.04,
+      "output": 0.08
+    }
   },
   {
     "id": "us.xai.grok-4.7",
@@ -415,7 +499,11 @@
     ],
     "maxTokens": 16384,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 2.2,
+      "output": 6.6
+    }
   },
   {
     "id": "us.moonshotai.kimi-k3",
@@ -436,7 +524,11 @@
     ],
     "maxTokens": 16384,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 3.3,
+      "output": 16.5
+    }
   },
   {
     "id": "minimax.minimax-m2.5",
@@ -453,7 +545,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.3,
+      "output": 1.2
+    }
   },
   {
     "id": "nvidia.nemotron-super-3-120b",
@@ -470,7 +566,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.15,
+      "output": 0.65
+    }
   },
   {
     "id": "amazon.nova-pro-v1:0",
@@ -486,7 +586,11 @@
       "tool_use",
       "streaming"
     ],
-    "maxTokens": 5120
+    "maxTokens": 5120,
+    "price": {
+      "input": 0.8,
+      "output": 3.2
+    }
   },
   {
     "id": "us.amazon.nova-2-lite-v1:0",
@@ -502,7 +606,11 @@
       "vision",
       "streaming"
     ],
-    "maxTokens": 5120
+    "maxTokens": 5120,
+    "price": {
+      "input": 0.33,
+      "output": 2.75
+    }
   },
   {
     "id": "amazon.nova-lite-v1:0",
@@ -517,7 +625,11 @@
       "vision",
       "streaming"
     ],
-    "maxTokens": 5120
+    "maxTokens": 5120,
+    "price": {
+      "input": 0.06,
+      "output": 0.24
+    }
   },
   {
     "id": "amazon.nova-micro-v1:0",
@@ -531,16 +643,20 @@
       "text",
       "streaming"
     ],
-    "maxTokens": 5120
+    "maxTokens": 5120,
+    "price": {
+      "input": 0.035,
+      "output": 0.14
+    }
   },
   {
-    "id": "us.openai.gpt-6-astra",
-    "name": "GPT-6 Astra",
+    "id": "us.openai.gpt-6.2-astra",
+    "name": "GPT-6.2 Astra",
     "provider": "OpenAI",
-    "useCase": "OpenAI's most capable model, for the hardest end-to-end work, 1M context",
+    "useCase": "OpenAI's frontier model, for complex multistep projects, 1M context",
     "aliases": [
       "gpt-astra",
-      "gpt-6-astra"
+      "gpt-6.2-astra"
     ],
     "capabilities": [
       "text",
@@ -551,16 +667,20 @@
     ],
     "maxTokens": 16384,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 8.8,
+      "output": 44
+    }
   },
   {
-    "id": "us.openai.gpt-6.1-sol",
-    "name": "GPT-6.1 Sol",
+    "id": "us.openai.gpt-6.2-sol",
+    "name": "GPT-6.2 Sol",
     "provider": "OpenAI",
-    "useCase": "Newest GPT for agents that work through codebases and documents, 1M context",
+    "useCase": "Fast, versatile GPT for everyday work, 1M context",
     "aliases": [
       "gpt-sol",
-      "gpt-6.1-sol"
+      "gpt-6.2-sol"
     ],
     "capabilities": [
       "text",
@@ -571,7 +691,11 @@
     ],
     "maxTokens": 16384,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 2.2,
+      "output": 11
+    }
   },
   {
     "id": "us.openai.gpt-6.1-terra",
@@ -591,7 +715,11 @@
     ],
     "maxTokens": 16384,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 1.1,
+      "output": 5.5
+    }
   },
   {
     "id": "us.openai.gpt-6-luna",
@@ -611,7 +739,11 @@
     ],
     "maxTokens": 16384,
     "noTemperature": true,
-    "effort": true
+    "effort": true,
+    "price": {
+      "input": 0.11,
+      "output": 0.55
+    }
   },
   {
     "id": "openai.gpt-oss-120b-1:0",
@@ -627,7 +759,11 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.15,
+      "output": 0.6
+    }
   },
   {
     "id": "openai.gpt-oss-20b-1:0",
@@ -642,6 +778,10 @@
       "streaming",
       "structured_output"
     ],
-    "maxTokens": 8192
+    "maxTokens": 8192,
+    "price": {
+      "input": 0.07,
+      "output": 0.3
+    }
   }
 ]

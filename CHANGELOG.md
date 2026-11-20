@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-11-20
+
+### Added
+
+- `bedrock_panel` tool: 2-5 models discuss one prompt in turn and the tool returns the transcript. Unlike `bedrock_compare` and `bedrock_judge`, the models answer one after another and each sees what the earlier ones said.
+  - `roles` gives each model one of six presets (`critic`, `builder`, `fact-checker`, `devils-advocate`, `simplifier`, `moderator`), free text up to 200 characters, or `null`. Every model is told who else is on the panel and in which role.
+  - `rounds` (1 to 3, default 1) lets each model answer again having seen everything so far; `summarize` names a model that closes with where the panel agrees and disagrees; `level` (`cheap`, `medium` or `intense`) picks a default panel of three when `models` is absent.
+  - A model's view is one user message holding the question and the turns so far, each prefixed with the speaker's name in square brackets, its own turns marked `(you)`. What a model said never reaches another model's system prompt.
+  - A model that fails loses its turn and the panel carries on, as in `bedrock_compare`. The same model may be listed twice only with different roles. `max_tokens` and `effort` work as in `bedrock_compare`.
+  - The idea comes from the group-chat round in confab; no code or dependency was taken from it.
+- GPT-6.2 Astra (`us.openai.gpt-6.2-astra`) and GPT-6.2 Sol (`us.openai.gpt-6.2-sol`), on Bedrock since 2026-11-17. Both were live-probed on 2026-11-20: they take `schema` and `effort` from `low` to `max`, and reject `temperature`, so they are flagged `noTemperature`.
+- `bedrock_doctor` tool: one small billed call (a one-word prompt, at most 32 output tokens) to every registry text model, or only the `models` you pass, with `concurrency` 1 to 8 (default 4). The table gives one status per model: `ok`, `throttled`, `denied`, `invalid` or `error`, with the latency and a short note.
+- `files` option on `bedrock_ask`, `bedrock_compare`, `bedrock_judge` and `bedrock_panel`: local text files are added to the prompt as fenced blocks. Files are read only from under `BEDROCK_MCP_FILES_ROOT` (default the server's working folder, refused when that is a home folder or a drive root), at most 10 files, 256 KB each and 1 MB in total; names that look like secret stores (`.env`, `.npmrc`, `.git-credentials`, private keys, anything under `.ssh` or `.aws` and the like), network and device paths, binary files and anything outside the root are refused, and one refusal fails the call before any model is billed. The content is sent to the model provider.
+- Cost estimates: every text model in `src/data/text-models.json` now has an optional `price` (USD per 1M input and output tokens). `bedrock_ask`, `bedrock_compare`, `bedrock_judge` and `bedrock_panel` show an estimated cost, and `bedrock_list_models` has a price column. The prices are from the AWS Price List bulk files for us-east-1, read 2026-11-20, on-demand standard tier; for ids with the `us.` profile prefix the non-global price was used. Cache, batch and long-context pricing are not modeled, so a figure is an estimate.
+- `level` (`cheap`, `medium`, `intense`) on `bedrock_ask`, `bedrock_compare` and `bedrock_judge`, with the same presets as `bedrock_panel`. `bedrock_ask` uses the first model of the level; `model` on `bedrock_ask` and `models` on `bedrock_compare` and `bedrock_judge` are now optional when `level` is given, and `models` wins over `level`. `bedrock_ask` rejects `model` together with `level`.
+- One-click `.mcpb` bundle for Claude Desktop and other MCPB hosts: `npm run pack:mcpb` ([`scripts/pack-mcpb.mjs`](scripts/pack-mcpb.mjs), manifest in [`mcpb/manifest.json`](mcpb/manifest.json)) builds `bedrock-multi-model-mcp-<version>.mcpb`, and a `bundle` job in `release.yml` attaches it to the GitHub release after the publish job succeeds.
+- MCP prompts: `second-opinion`, `compare-models` and `panel-discussion` (ready-made instructions that call `bedrock_ask`, `bedrock_compare` and `bedrock_panel`).
+- `conversation_id` on `bedrock_ask`: opt-in follow-up conversations. Earlier turns of the same id are sent along as context. Kept in process memory only, forgotten 30 minutes after the last turn or when the server restarts, at most 20 turns per conversation, 50 conversations and 200,000 characters per conversation; the id is 1 to 64 letters, digits, `-` or `_`.
+- New-model watcher: `npm run new-models` ([`scripts/check-new-models.mjs`](scripts/check-new-models.mjs)) lists Bedrock model cards that the catalog neither has nor has deliberately skipped in [`scripts/model-skips.json`](scripts/model-skips.json). A `new-models` job in `lifecycle.yml` runs it weekly and on manual runs, and opens or updates one issue.
+- Luma Ray 2 keyframes on `bedrock_generate_video`: `start_image_path` and `end_image_path` turn local JPEG or PNG files (512x512 to 4096x4096 pixels) into the first and last frame. The images are checked before the job is started.
+- Image inputs on `bedrock_embed_similarity`: `images` takes local JPEG or PNG paths to embed beside the texts, for the multimodal models `titan-multimodal` and `cohere`. The tool needs at least 2 inputs and at most 50 across `texts` and `images`.
+
+### Changed
+
+- **Breaking:** bare `gpt-astra` now resolves to GPT-6.2 Astra and `gpt-sol` to GPT-6.2 Sol. The `intense` panel of `bedrock_panel` uses `gpt-astra`, so it moves with it.
+
+### Removed
+
+- **Breaking:** GPT-6 Astra (`gpt-6-astra`) and GPT-6.1 Sol (`gpt-6.1-sol`). AWS's cards name GPT-6.2 Astra and GPT-6.2 Sol as their next generation.
+
+### Security
+
+- `npm audit` went from 2 findings to 0, closing the 7 Dependabot alerts opened on 2026-11-13: hono 4.13.13 -> 4.13.19 (5 advisories) and @hono/node-server 2.1.5 -> 2.1.9 (2 advisories), both pulled in by `@modelcontextprotocol/sdk`. The stdio server never starts hono's HTTP server.
+- `@aws-sdk/client-bedrock-runtime` floor raised to ^3.1173.0.
+
 ## [0.8.1] - 2026-11-15
 
 ### Fixed

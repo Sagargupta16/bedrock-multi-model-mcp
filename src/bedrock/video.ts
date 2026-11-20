@@ -6,6 +6,8 @@ import type { DocumentType } from "@smithy/types";
 import { indexByAlias, loadRegistry } from "../models.js";
 import { VideoModelSchema, type VideoModel } from "../types.js";
 import { getClient } from "./client.js";
+import { readImageFile } from "./edit.js";
+import { readPngSize } from "./image.js";
 
 // Video model catalog loaded and validated from src/data/video-models.json.
 // All video models are invoked asynchronously via StartAsyncInvoke with S3
@@ -26,6 +28,9 @@ export interface VideoOptions {
   prompt: string;
   s3Uri: string;
   durationSeconds?: number;
+  // Local JPEG or PNG files used as the first and last frame (Luma Ray 2).
+  startImagePath?: string;
+  endImagePath?: string;
 }
 
 export interface VideoStartResult {
@@ -35,6 +40,8 @@ export interface VideoStartResult {
   s3Uri: string;
   durationSeconds: number;
   region?: string;
+  // Which keyframes were sent, when any were.
+  keyframes?: Array<"start" | "end">;
 }
 
 export interface VideoStatusResult {
@@ -48,15 +55,80 @@ export interface VideoStatusResult {
   failureMessage?: string;
 }
 
+export interface KeyframeImage {
+  mediaType: "image/jpeg" | "image/png";
+  base64: string;
+}
+
 // Luma Ray 2 supports only 5s or 9s durations, expressed as strings.
-function buildLumaRayInput(options: VideoOptions, duration: number): Record<string, unknown> {
-  return {
+// Image-to-video: keyframes.frame0 is the start image, frame1 the end image.
+// https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-luma.html
+export function buildLumaRayInput(
+  options: VideoOptions,
+  duration: number,
+  frames?: { start?: KeyframeImage; end?: KeyframeImage },
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {
     prompt: options.prompt,
     aspect_ratio: "16:9",
     duration: duration >= 9 ? "9s" : "5s",
     resolution: "720p",
     loop: false,
   };
+  const frame = (image: KeyframeImage) => ({
+    type: "image",
+    source: { type: "base64", media_type: image.mediaType, data: image.base64 },
+  });
+  const keyframes: Record<string, unknown> = {};
+  if (frames?.start) keyframes.frame0 = frame(frames.start);
+  if (frames?.end) keyframes.frame1 = frame(frames.end);
+  if (Object.keys(keyframes).length > 0) body.keyframes = keyframes;
+  return body;
+}
+
+// Luma Ray 2 image limits from the page above: JPEG or PNG, at least 512x512
+// and at most 4096x4096 pixels. The page states no file size limit.
+const KEYFRAME_MIN_PX = 512;
+const KEYFRAME_MAX_PX = 4096;
+
+// Width and height from the first SOF marker of a JPEG, or undefined.
+export function readJpegSize(jpeg: Buffer): { width: number; height: number } | undefined {
+  let i = 2;
+  while (i + 9 < jpeg.length) {
+    if (jpeg[i] !== 0xff) return undefined;
+    const marker = jpeg[i + 1];
+    if (marker === 0xff) {
+      i += 1;
+      continue;
+    }
+    // SOF0-SOF15 except DHT (c4), JPG (c8) and DAC (cc).
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      return { height: jpeg.readUInt16BE(i + 5), width: jpeg.readUInt16BE(i + 7) };
+    }
+    i += 2 + jpeg.readUInt16BE(i + 2);
+  }
+  return undefined;
+}
+
+// Reads and checks a keyframe file before the billed call is sent.
+export async function readKeyframeImage(path: string, label: string): Promise<KeyframeImage> {
+  const { full, bytes, mediaType } = await readImageFile(path);
+  if (mediaType === "image/webp") {
+    throw new Error(`${label} image ${full} is WebP; Luma Ray 2 takes JPEG or PNG only`);
+  }
+  const size = mediaType === "image/png" ? readPngSize(bytes) : readJpegSize(bytes);
+  if (!size) throw new Error(`${label} image ${full}: could not read the image dimensions`);
+  if (size.width < KEYFRAME_MIN_PX || size.height < KEYFRAME_MIN_PX) {
+    throw new Error(
+      `${label} image ${full} is ${size.width}x${size.height}; Luma Ray 2 needs at least ${KEYFRAME_MIN_PX}x${KEYFRAME_MIN_PX} pixels`,
+    );
+  }
+  if (size.width > KEYFRAME_MAX_PX || size.height > KEYFRAME_MAX_PX) {
+    throw new Error(
+      `${label} image ${full} is ${size.width}x${size.height}; Luma Ray 2 allows at most ${KEYFRAME_MAX_PX}x${KEYFRAME_MAX_PX} pixels`,
+    );
+  }
+  return { mediaType, base64: bytes.toString("base64") };
 }
 
 // Takes no abort signal on purpose: cancelling after the request is sent can
@@ -70,7 +142,15 @@ export async function startVideoGeneration(options: VideoOptions): Promise<Video
   }
   const model = entry ?? VIDEO_MODELS[0];
   const duration = options.durationSeconds ?? 5;
-  const modelInput = buildLumaRayInput(options, duration);
+  // Read and validate the images before the send, so a bad path never reaches
+  // the billed call.
+  const frames: { start?: KeyframeImage; end?: KeyframeImage } = {};
+  if (options.startImagePath) frames.start = await readKeyframeImage(options.startImagePath, "Start");
+  if (options.endImagePath) frames.end = await readKeyframeImage(options.endImagePath, "End");
+  const modelInput = buildLumaRayInput(options, duration, frames);
+  const keyframes: Array<"start" | "end"> = [];
+  if (frames.start) keyframes.push("start");
+  if (frames.end) keyframes.push("end");
   const effectiveDuration = duration >= 9 ? 9 : 5;
 
   const command = new StartAsyncInvokeCommand({
@@ -89,6 +169,7 @@ export async function startVideoGeneration(options: VideoOptions): Promise<Video
     s3Uri: options.s3Uri,
     durationSeconds: effectiveDuration,
     region: model.region,
+    ...(keyframes.length > 0 ? { keyframes } : {}),
   };
 }
 

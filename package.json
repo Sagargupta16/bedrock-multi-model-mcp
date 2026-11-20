@@ -1,6 +1,6 @@
 {
   "name": "bedrock-multi-model-mcp",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "mcpName": "io.github.Sagargupta16/bedrock-multi-model-mcp",
   "description": "MCP server for AWS Bedrock - text, image generation and editing, video, and embeddings across Claude, GPT, Grok, Kimi, Gemma, Mistral, Nova, Qwen, DeepSeek and more",
   "type": "module",
@@ -22,6 +22,8 @@
     "test": "npm run build && node --test \"dist/**/*.test.js\"",
     "benchmark": "npm run build && node scripts/benchmark.mjs",
     "lifecycle": "node scripts/check-lifecycle.mjs",
+    "new-models": "node scripts/check-new-models.mjs",
+    "pack:mcpb": "npm run build && node scripts/pack-mcpb.mjs",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [
@@ -52,7 +54,7 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1165.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1173.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^4.6.7"
   },

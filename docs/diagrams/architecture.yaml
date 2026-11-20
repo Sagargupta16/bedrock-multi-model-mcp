@@ -39,7 +39,7 @@ nodes:
     evidence: src/index.ts:542#StdioServerTransport
   tools:
     icon: logos:model-context-protocol-icon
-    label: 9 MCP tools
+    label: 11 MCP tools
     note: index.ts, Zod input schemas
     in: server
     evidence: src/index.ts:55#registerTool
