@@ -60,7 +60,6 @@ test("bare-tier Claude aliases point at the 5.5 generation", () => {
 test("aliases of the models added on 2026-11-01 resolve to the probed ids", () => {
   // Each id answered a live Converse call on 2026-11-01 before it was added.
   const expected: Record<string, string> = {
-    "gpt-sol": "us.openai.gpt-6.1-sol",
     "gpt-terra": "us.openai.gpt-6.1-terra",
     grok: "us.xai.grok-4.7",
     kimi: "us.moonshotai.kimi-k3",
@@ -83,8 +82,17 @@ test("aliases of the models added on 2026-11-10 resolve to the probed ids", () =
   // Bare `fable` moved to 5.2; `fable-5.1` keeps the previous one reachable.
   assert.equal(resolveModelId("fable"), "us.anthropic.claude-fable-5-2");
   assert.equal(resolveModelId("fable-5.1"), "us.anthropic.claude-fable-5-1");
-  assert.equal(resolveModelId("gpt-astra"), "us.openai.gpt-6-astra");
   assert.equal(resolveModelId("gpt-luna"), "us.openai.gpt-6-luna");
+});
+
+test("bare GPT tier aliases track the newest model in each tier", () => {
+  // GPT-6.2 Astra and GPT-6.2 Sol (on Bedrock since 2026-11-17) answered a live
+  // Converse call on 2026-11-20 and replaced GPT-6 Astra and GPT-6.1 Sol, which
+  // AWS's cards name as their previous generation.
+  assert.equal(resolveModelId("gpt-astra"), "us.openai.gpt-6.2-astra");
+  assert.equal(resolveModelId("gpt-sol"), "us.openai.gpt-6.2-sol");
+  assert.equal(getModelInfo("us.openai.gpt-6-astra"), undefined);
+  assert.equal(getModelInfo("us.openai.gpt-6.1-sol"), undefined);
 });
 
 test("only the Gemma 4 entries are served through bedrock-mantle", () => {
@@ -110,11 +118,12 @@ test("effort is flagged exactly on the models that accepted it live", () => {
   // Kimi K3 answered on 2026-11-01. Haiku 4.5 and every other Converse model
   // returned "This model doesn't support the effort field". The Gemma 4 models
   // (bedrock-mantle reasoning_effort) took low to xhigh on 2026-11-01. Fable 5.2,
-  // GPT-6 Astra and GPT-6 Luna answered at low and at max on 2026-11-10.
+  // GPT-6 Astra and GPT-6 Luna answered at low and at max on 2026-11-10, and
+  // GPT-6.2 Astra and GPT-6.2 Sol on 2026-11-20.
   const accepted = new Set([
-    "us.openai.gpt-6-astra",
+    "us.openai.gpt-6.2-astra",
     "us.openai.gpt-6-luna",
-    "us.openai.gpt-6.1-sol",
+    "us.openai.gpt-6.2-sol",
     "us.openai.gpt-6.1-terra",
     "us.xai.grok-4.7",
     "us.moonshotai.kimi-k3",
@@ -166,7 +175,8 @@ test("noTemperature is set exactly on the entries that rejected temperature live
   // On 2026-11-01 GPT-6.1 Sol and Terra, Grok 4.7 and Kimi K3 returned "This
   // model doesn't support the temperature field", while MiniMax M2.5, Nemotron 3
   // Super, Ministral 3, Magistral Small and Qwen3 Next answered with it set.
-  // On 2026-11-10 Fable 5.2, GPT-6 Astra and GPT-6 Luna rejected it the same way.
+  // On 2026-11-10 Fable 5.2, GPT-6 Astra and GPT-6 Luna rejected it the same way,
+  // and on 2026-11-20 so did GPT-6.2 Astra and GPT-6.2 Sol.
   for (const id of [
     "us.anthropic.claude-opus-5-5",
     "us.anthropic.claude-sonnet-5-5",
@@ -175,9 +185,9 @@ test("noTemperature is set exactly on the entries that rejected temperature live
     "us.anthropic.claude-fable-5-1",
     "us.anthropic.claude-opus-5",
     "us.anthropic.claude-sonnet-5",
-    "us.openai.gpt-6-astra",
+    "us.openai.gpt-6.2-astra",
     "us.openai.gpt-6-luna",
-    "us.openai.gpt-6.1-sol",
+    "us.openai.gpt-6.2-sol",
     "us.openai.gpt-6.1-terra",
     "us.xai.grok-4.7",
     "us.moonshotai.kimi-k3",

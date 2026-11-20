@@ -22,7 +22,7 @@ The 26 text models in the 2026-10-18 [benchmark](#benchmark) answered every call
 that run, Claude Opus 5.5, Sonnet 5.5 and Haiku 5.5 and, in 0.7.0, twelve models from
 OpenAI, xAI, Moonshot AI, Google, MiniMax, NVIDIA, Mistral and Qwen joined the registry, while the
 five models AWS moved to Legacy on 2026-09-30 (Llama 4 Maverick and Scout, Llama 3.3 70B,
-Devstral 2, DeepSeek R1) left it. 0.8.0 added Claude Fable 5.2, GPT-6 Astra and GPT-6 Luna.
+Devstral 2, DeepSeek R1) left it. 0.8.0 added Claude Fable 5.2, GPT-6 Astra and GPT-6 Luna, and 0.9.0 moved to GPT-6.2 Astra and GPT-6.2 Sol.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/demo/judge-dark.svg">
@@ -61,7 +61,7 @@ Model data lives in [src/data/](src/data/) (`text-models.json`, `image-models.js
 | Provider | Models | Aliases |
 |----------|--------|---------|
 | Anthropic | Claude Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5 (current); Fable 5.1, Opus 5 / 4.6, Sonnet 5 / 4.6, Haiku 4.5 (previous-gen) | `fable`, `claude-opus`, `claude-sonnet`, `claude-haiku` |
-| OpenAI | GPT-6 Astra, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Luna, GPT-OSS 120B, GPT-OSS 20B | `gpt-astra`, `gpt-sol`, `gpt-terra`, `gpt-luna`, `gpt-oss`, `gpt-oss-20b` |
+| OpenAI | GPT-6.2 Astra, GPT-6.2 Sol, GPT-6.1 Terra, GPT-6 Luna, GPT-OSS 120B, GPT-OSS 20B | `gpt-astra`, `gpt-sol`, `gpt-terra`, `gpt-luna`, `gpt-oss`, `gpt-oss-20b` |
 | xAI | Grok 4.7 | `grok` |
 | Moonshot AI | Kimi K3 | `kimi` |
 | Mistral | Mistral Large 3, Ministral 3 14B, Magistral Small, Pixtral Large | `mistral-large`, `ministral`, `magistral`, `pixtral` |
@@ -81,7 +81,7 @@ endpoint, but this server does not sign mantle requests.
 
 Listed on Bedrock but not in the registry: GLM 5.3 and Claude Mythos (access is gated per
 account; GLM 5.3 and Mythos 5.1 failed the 2026-11-01 probe), Kimi K3.1 Pro - Highspeed
-(launched 2026-11-04; every probe call on 2026-11-10 was throttled), and Grok 4.3 (answers
+(launched 2026-11-04; every probe call on 2026-11-10 and 2026-11-20 was throttled), and Grok 4.3 (answers
 on bedrock-mantle, but Grok 4.7 supersedes it). AWS lists no Active Meta model.
 
 Bare-tier aliases (`fable`, `claude-opus`, `claude-sonnet`, `claude-haiku`, `gpt-astra`,
@@ -97,8 +97,9 @@ announced Claude Opus 5.5 on Bedrock on 2026-09-22, Sonnet 5.5 on 2026-09-28, Ha
 value returns a 400, so `text-models.json` marks those entries `noTemperature` and this
 server omits the parameter for them - the `temperature` argument is accepted but has no
 effect. The three 5.5 models return the same 400 (probed 2026-10-21), and so do GPT-6.1
-Sol and Terra, Grok 4.7 and Kimi K3 ("This model doesn't support the temperature field",
-probed 2026-11-01) and Fable 5.2, GPT-6 Astra and GPT-6 Luna (probed 2026-11-10). Gemma 4 and the other open-weight models take it. Claude Haiku 4.5,
+Terra, Grok 4.7 and Kimi K3 ("This model doesn't support the temperature field",
+probed 2026-11-01), Fable 5.2 and GPT-6 Luna (probed 2026-11-10) and GPT-6.2 Astra and Sol
+(probed 2026-11-20). Gemma 4 and the other open-weight models take it. Claude Haiku 4.5,
 Opus 4.6 and Sonnet 4.6 still honor it, so pin
 `claude-sonnet-4.6` or `claude-haiku-4.5` if you need to set it on a Claude model.
 
@@ -113,8 +114,8 @@ Haiku 4.5). Pass `max_tokens` to go higher on a single call.
 `outputConfig.textFormat`, so the reply is JSON that matches it, shown pretty-printed.
 Object schemas need `"additionalProperties": false`; Bedrock rejects numeric and string
 length constraints (`minimum`, `maxLength` and the like) with a 400. Probed on every
-registry model (2026-10-21, and 2026-11-01 and 2026-11-10 for the models added then): all
-10 Claude models, GPT-6 Astra and Luna, GPT-6.1 Sol and Terra, both GPT-OSS models, Grok 4.7, Kimi K3, Mistral Large 3,
+registry model (2026-10-21, and 2026-11-01, 2026-11-10 and 2026-11-20 for the models added
+then): all 10 Claude models, GPT-6.2 Astra and Sol, GPT-6.1 Terra, GPT-6 Luna, both GPT-OSS models, Grok 4.7, Kimi K3, Mistral Large 3,
 Ministral 3, all three Qwen3 models, DeepSeek V3.2, MiniMax M2.5, Nemotron 3 Super and the
 three Gemma 4 models accept it (`structured_output` in `bedrock_list_models`; for Gemma it
 is sent as Chat Completions `response_format`). Nova and Pixtral answer "This
@@ -125,8 +126,8 @@ first brace.
 
 `effort` (`low`, `medium`, `high`, `xhigh`, `max`) sets the thinking depth and token
 spend through Converse `outputConfig.effort`. Every Claude model except Haiku 4.5 takes
-it, and so do GPT-6.1 Sol and Terra, Grok 4.7 and Kimi K3 (probed 2026-11-01) and GPT-6
-Astra and Luna (probed 2026-11-10). Gemma 4
+it, and so do GPT-6.1 Terra, Grok 4.7 and Kimi K3 (probed 2026-11-01), GPT-6 Luna (probed
+2026-11-10) and GPT-6.2 Astra and Sol (probed 2026-11-20). Gemma 4
 takes `low` to `xhigh` as Chat Completions `reasoning_effort` and answers `max` with a
 400 ("not supported with this model"). Claude
 Opus 5.5 and Haiku 5.5 default to `medium`, the other Claude models to `high`. On
@@ -373,7 +374,7 @@ free text up to 200 characters, or `null`. `summarize` names a model that closes
 short summary of where the panel agrees and disagrees; it is told it is the moderator
 and is not on the panel unless it is also in `models`. Without `models`, `level` picks
 a panel of three: `cheap` (Nova Micro, Ministral 3 14B, Qwen3 Next 80B A3B), `medium`
-(Claude Haiku 5.5, GPT-6 Luna, Mistral Large 3) or `intense` (Claude Fable 5.2, GPT-6
+(Claude Haiku 5.5, GPT-6 Luna, Mistral Large 3) or `intense` (Claude Fable 5.2, GPT-6.2
 Astra, Grok 4.7). The same model may take two seats only in different roles. A model
 that fails loses its turn, the next one carries on, and the failure is not mentioned to
 it. Turns run sequentially and each is billed: models x rounds generations, plus one for
@@ -463,7 +464,7 @@ Model definitions are data, kept in `src/data/*.json` and validated against Zod 
 | Converse API for every text model on bedrock-runtime | One request and response shape across ten providers, so adding a text model is a JSON entry, not a new code path. |
 | Gemma 4 through bedrock-mantle, behind the same options | Gemma 4 has no Converse API. Its requests are built by the same `buildConverseInput` (option checks, output cap, temperature rules) and only the transport changes, so compare and judge mix it with Converse models. |
 | Model catalog as JSON + Zod | A malformed or half-edited registry fails at startup, not on the first call. Capabilities are a closed enum, so a typo like `tool-use` is rejected at load. |
-| Per-model `noTemperature` flag | Claude Opus 4.7 and later, GPT-6 and 6.1, Grok 4.7 and Kimi K3 return a 400 for `temperature`; the flag drops the parameter for exactly those entries. |
+| Per-model `noTemperature` flag | Claude Opus 4.7 and later, GPT-6.x, Grok 4.7 and Kimi K3 return a 400 for `temperature`; the flag drops the parameter for exactly those entries. |
 | Measured `effort` and `structured_output` flags | Each was probed live on every registry model, so an unsupported option fails with the list of models that take it, before a billed call. Ids outside the registry pass through for Bedrock to judge. |
 | Cached SDK client per region | Text and embeddings run in `AWS_REGION`, while the Stability and Luma models are only served from us-west-2. |
 | `Promise.allSettled` in `bedrock_compare` | One model without access, or one throttled call, reports its own error while the rest still answer. |
@@ -538,7 +539,7 @@ node scripts/call-tool.mjs bedrock_ask '{"model":"nova-micro","prompt":"Say hi"}
 | `` `temperature` is deprecated for this model. `` | A Claude 4.7-or-later model was reached without a registry entry, so the server sent its default `temperature` of 0.7. Anthropic deprecated `temperature` / `top_p` / `top_k` for Claude Opus 4.7 and later, and a non-default value returns a 400 there. Earlier models (Haiku 4.5, Opus 4.6, Sonnet 4.6) still accept it. | Call it through a registered alias, or add a registry entry with `"noTemperature": true` in `src/data/text-models.json`. |
 | `<model> does not support structured output` / `does not take effort` | This server's registry says the model rejects that option (measured 2026-10-21 and 2026-11-01). | Pick a model from the list in the message, or drop `schema` / `effort`. |
 | `This model doesn't support the outputConfig field.` | A model outside the registry rejected `schema` or `effort`. | Drop the option for that model. |
-| `This model doesn't support the temperature field.` | A model outside the registry that takes no `temperature` (GPT-6.1, Grok and Kimi do this) got the server's default 0.7. | Call it through a registered alias, or add a registry entry with `"noTemperature": true`. |
+| `This model doesn't support the temperature field.` | A model outside the registry that takes no `temperature` (GPT-6.x, Grok and Kimi do this) got the server's default 0.7. | Call it through a registered alias, or add a registry entry with `"noTemperature": true`. |
 | `Could not load credentials from any providers` | No bearer token reached the server (or it was empty) and no IAM credentials resolved. | Put the real token in the MCP config's `env`, or configure an AWS profile, SSO or IAM role. |
 | `AccessDeniedException` | Model access has not been granted to your account. | AWS Console > Bedrock > Model access, request the model, retry once it shows Access granted. |
 | `bedrock_video_status` reports `Failed` | Bedrock returns the reason on the job itself. | Read the `Reason:` line printed under the status and fix what it names. |

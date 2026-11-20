@@ -534,13 +534,13 @@
     "maxTokens": 5120
   },
   {
-    "id": "us.openai.gpt-6-astra",
-    "name": "GPT-6 Astra",
+    "id": "us.openai.gpt-6.2-astra",
+    "name": "GPT-6.2 Astra",
     "provider": "OpenAI",
-    "useCase": "OpenAI's most capable model, for the hardest end-to-end work, 1M context",
+    "useCase": "OpenAI's frontier model, for complex multistep projects, 1M context",
     "aliases": [
       "gpt-astra",
-      "gpt-6-astra"
+      "gpt-6.2-astra"
     ],
     "capabilities": [
       "text",
@@ -554,13 +554,13 @@
     "effort": true
   },
   {
-    "id": "us.openai.gpt-6.1-sol",
-    "name": "GPT-6.1 Sol",
+    "id": "us.openai.gpt-6.2-sol",
+    "name": "GPT-6.2 Sol",
     "provider": "OpenAI",
-    "useCase": "Newest GPT for agents that work through codebases and documents, 1M context",
+    "useCase": "Fast, versatile GPT for everyday work, 1M context",
     "aliases": [
       "gpt-sol",
-      "gpt-6.1-sol"
+      "gpt-6.2-sol"
     ],
     "capabilities": [
       "text",

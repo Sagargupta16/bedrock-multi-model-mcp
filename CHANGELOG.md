@@ -12,6 +12,20 @@ All notable changes to this project will be documented in this file.
   - A model's view is one user message holding the question and the turns so far, each prefixed with the speaker's name in square brackets, its own turns marked `(you)`. What a model said never reaches another model's system prompt.
   - A model that fails loses its turn and the panel carries on, as in `bedrock_compare`. The same model may be listed twice only with different roles. `max_tokens` and `effort` work as in `bedrock_compare`.
   - The idea comes from the group-chat round in confab; no code or dependency was taken from it.
+- GPT-6.2 Astra (`us.openai.gpt-6.2-astra`) and GPT-6.2 Sol (`us.openai.gpt-6.2-sol`), on Bedrock since 2026-11-17. Both were live-probed on 2026-11-20: they take `schema` and `effort` from `low` to `max`, and reject `temperature`, so they are flagged `noTemperature`.
+
+### Changed
+
+- **Breaking:** bare `gpt-astra` now resolves to GPT-6.2 Astra and `gpt-sol` to GPT-6.2 Sol. The `intense` panel of `bedrock_panel` uses `gpt-astra`, so it moves with it.
+
+### Removed
+
+- **Breaking:** GPT-6 Astra (`gpt-6-astra`) and GPT-6.1 Sol (`gpt-6.1-sol`). AWS's cards name GPT-6.2 Astra and GPT-6.2 Sol as their next generation.
+
+### Security
+
+- `npm audit` went from 2 findings to 0, closing the 7 Dependabot alerts opened on 2026-11-13: hono 4.13.13 -> 4.13.19 (5 advisories) and @hono/node-server 2.1.5 -> 2.1.9 (2 advisories), both pulled in by `@modelcontextprotocol/sdk`. The stdio server never starts hono's HTTP server.
+- `@aws-sdk/client-bedrock-runtime` floor raised to ^3.1173.0.
 
 ## [0.8.1] - 2026-11-15
 
